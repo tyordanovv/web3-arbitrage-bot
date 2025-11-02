@@ -1,0 +1,41 @@
+[package]
+name = "arbitrage-bot"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+async-trait = "0.1"
+
+# Sui SDK
+sui-sdk = "0"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.9.8"
+
+# WebSocket
+tokio-tungstenite = "0.28"
+futures-util = "0.3"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "2.0.17"
+
+# Utilities
+chrono = "0.4"
+rust_decimal = "1.33"
+rust_decimal_macros = "1.33"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Config
+config = "0.15.18"
+dotenv = "0.15"
+
+[dev-dependencies]
+mockito = "1.2"
