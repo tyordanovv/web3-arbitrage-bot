@@ -1,8 +1,7 @@
 use rust_decimal::Decimal;
-use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 
-use crate::types::{BotError, DexId, Network, PoolId, Timestamp, TokenInfo, TokenPair, now, Result};
+use crate::types::{BotError, DexId, MIN_PROFIT_PERCENT, Network, PoolId, Result, Timestamp, TokenInfo, TokenPair, now};
 
 /// A single hop in an arbitrage path
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -224,7 +223,7 @@ impl Default for PathFinderConfig {
             intermediate_tokens: vec![],
             allowed_dexes: DexId::all(),
             min_profit_threshold: Decimal::from(1),
-            min_profit_percent: Decimal::from_str("0.5").unwrap(),
+            min_profit_percent: MIN_PROFIT_PERCENT,
         }
     }
 }
@@ -262,7 +261,7 @@ impl ArbitrageExecutionResult {
 mod tests {
     use rust_decimal::Decimal;
 
-    use crate::types::{DexId, Network, TokenInfo, TokenPair, now};
+    use crate::types::{DEX_SWAP_FEE_RATE, DexId, Network, TokenInfo, TokenPair, now};
 
     use super::*;
     
@@ -289,8 +288,8 @@ mod tests {
                     amount_in: 1000_000000, // 1000 USDC
                     expected_amount_out: 500_000000000, // 500 SUI
                     min_amount_out: 495_000000000,
-                    price_impact: Decimal::from_str("0.5").unwrap(),
-                    fee_rate: Decimal::from_str("0.003").unwrap(),
+                    price_impact: MIN_PROFIT_PERCENT,
+                    fee_rate: DEX_SWAP_FEE_RATE,
                 },
                 ArbitrageHop {
                     dex_id: DexId::Cetus,
@@ -302,8 +301,8 @@ mod tests {
                     amount_in: 500_000000000,
                     expected_amount_out: 1_50000000, // 1.5 BTC
                     min_amount_out: 1_48500000,
-                    price_impact: Decimal::from_str("0.3").unwrap(),
-                    fee_rate: Decimal::from_str("0.003").unwrap(),
+                    price_impact: MIN_PROFIT_PERCENT,
+                    fee_rate: DEX_SWAP_FEE_RATE,
                 },
                 ArbitrageHop {
                     dex_id: DexId::Cetus,
@@ -315,8 +314,8 @@ mod tests {
                     amount_in: 1_50000000,
                     expected_amount_out: 1010_000000, // 1010 USDC
                     min_amount_out: 1005_000000,
-                    price_impact: Decimal::from_str("0.2").unwrap(),
-                    fee_rate: Decimal::from_str("0.003").unwrap(),
+                    price_impact: MIN_PROFIT_PERCENT,
+                    fee_rate: DEX_SWAP_FEE_RATE,
                 },
             ],
             initial_amount: 1000_000000,

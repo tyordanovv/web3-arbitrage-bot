@@ -11,10 +11,6 @@ pub fn now() -> Timestamp {
     chrono::Utc::now().timestamp_millis() as u64
 }
 
-// ============================================================================
-// DEX Identification
-// ============================================================================
-
 /// Supported DEX identifiers
 /// 
 /// TODO Turbos
