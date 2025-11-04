@@ -168,7 +168,6 @@ pub struct ArbitrageOpportunity {
     pub net_profit: Decimal,
     pub net_profit_percent: Decimal,
     pub discovered_at: Timestamp,
-    pub estimated_execution_time_ms: u64,
 }
 
 impl ArbitrageOpportunity {
