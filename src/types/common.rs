@@ -61,18 +61,24 @@ impl FromStr for DexId {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Network {
     SuiTestnet,
+    SuiMainnet
 }
 
 impl Network {
     pub fn is_testnet(&self) -> bool {
         matches!(self, Network::SuiTestnet)
     }
+
+    pub fn is_mainnet(&self) -> bool {
+        matches!(self, Network::SuiMainnet)
+    }
 }
 
 impl fmt::Display for Network {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Network::SuiTestnet => write!(f, "sui-testnet")
+            Network::SuiTestnet => write!(f, "sui-testnet"),
+            Network::SuiMainnet => write!(f, "sui-mainnet")
         }
     }
 }

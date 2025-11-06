@@ -36,7 +36,7 @@ pub struct SyncState {
 
 /// DEX configuration
 pub struct DexConfig {
-    pub name: String,
+    pub name: DexId,
     pub package_id: String,
     pub monitored_pairs: Vec<TokenPair>,
     pub pool_addresses: HashMap<TokenPair, String>,

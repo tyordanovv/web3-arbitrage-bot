@@ -209,6 +209,7 @@ pub struct PathFinderConfig {
     pub max_price_impact_percent: Decimal,
     pub intermediate_tokens: Vec<TokenInfo>,
     pub allowed_dexes: Vec<DexId>,
+    pub allow_cross_chain: bool,
     pub min_profit_threshold: Decimal,
     pub min_profit_percent: Decimal,
 }
@@ -221,6 +222,7 @@ impl Default for PathFinderConfig {
             max_price_impact_percent: Decimal::from(5),
             intermediate_tokens: vec![],
             allowed_dexes: DexId::all(),
+            allow_cross_chain: false,
             min_profit_threshold: Decimal::from(1),
             min_profit_percent: MIN_PROFIT_PERCENT,
         }
