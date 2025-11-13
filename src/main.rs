@@ -2,80 +2,66 @@
 #![deny(clippy::expect_used)]
 #![deny(unused_must_use)]
 
+use std::sync::Arc;
+
+use arbitrage_bot::{arbitrage::{arbitrage_engine::ArbitrageEngine, calculator::{ArbitrageCalculator, DefaultArbitrageCalculator}, detector::{ArbitrageDetector, DefaultArbitrageDetector}, validator::{DefaultOpportunityValidator, OpportunityValidator}}, dex::manager::DexManager, event::processor::{DefaultEventProcessor, EventProcessor}, execution::executor::{DefaultTradeExecutor, TradeExecutor}, utils::{config::Config, logger::init}};
+use tokio::sync::RwLock;
 use tracing::info;
 
 use anyhow::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // TODO Setup
-    // 1. Load environment variables
-    // 2. Initialize logging
-    // 3. Load configuration
+    init();
+    info!("Starting Arbitrage Bot");
     
-    info!("Starting the Arbitrage Bot");
+    let config = Config::load()?;
     
-    // TODO Phase 1: Initialize config
+    // 1. Create and initialize DexManager
+    let mut dex_manager = DexManager::new();
+    // TODO: Register DEX adapters here
+    // for dex_config in config.enabled_dexes() {
+    //     let adapter = create_dex_adapter(dex_config, config.network_config()).await?;
+    //     dex_manager.register_adapter(adapter)?;
+    // }
+    // dex_manager.initialize_all().await?;
     
-    // TODO Phase 2: Create DexManager
+    let dex_manager = Arc::new(RwLock::new(dex_manager));
     
-    // TODO Phase 2: Register DEXs
+    // 2. Create components using concrete implementations
+    let event_processor = Box::new(DefaultEventProcessor::new(
+        dex_manager.clone(),
+        config.network_config().clone(),
+    )) as Box<dyn EventProcessor>;
     
-    // TODO Phase 4: Register more DEXs
+    let calculator = Box::new(DefaultArbitrageCalculator::new(
+        config.arbitrage_config().clone(),
+    )) as Box<dyn ArbitrageCalculator>;
     
-    // TODO Phase 2: Initialize all DEXs (fetch initial state)
+    let detector = Box::new(DefaultArbitrageDetector::new(
+        dex_manager.clone(),
+        calculator,
+    )) as Box<dyn ArbitrageDetector>;
     
-    // TODO Phase 3: Start event processor
+    let executor = Box::new(DefaultTradeExecutor::new(
+        config.execution_config().clone(),
+    )) as Box<dyn TradeExecutor>;
     
-    // TODO Phase 5: Start sync coordinator
+    let validator = Box::new(DefaultOpportunityValidator::new(
+        dex_manager.clone(),
+        config.validation_config().clone(),
+    )) as Box<dyn OpportunityValidator>;
     
-    // TODO Phase 6: Start arbitrage detector
+    // 3. Create and run engine
+    let mut engine = ArbitrageEngine::new(
+        event_processor,
+        detector,
+        executor,
+        validator,
+    );
     
-    // TODO Phase 7: Start trade executor
+    tracing::info!("Arbitrage Engine starting...");
+    engine.start().await?;
     
-    // Main event loop
-    info!("📊 Bot initialized, entering main loop");
-    
-    loop {
-        tokio::select! {
-            // TODO Phase 6: Handle arbitrage opportunities
-            // Some(opp) = detector.next_opportunity() => {
-            //     handle_opportunity(opp, &executor).await?;
-            // }
-            
-            // TODO Phase 5: Periodic health check
-            // _ = tokio::time::sleep(std::time::Duration::from_secs(60)) => {
-            //     let health = dex_manager.heartbeat_all().await?;
-            //     info!("Health check: {:?}", health);
-            // }
-            
-            // Graceful shutdown
-            _ = tokio::signal::ctrl_c() => {
-                info!("Shutdown signal received");
-                break;
-            }
-            
-            // TODO: Remove this once you have real work to do
-            _ = tokio::time::sleep(std::time::Duration::from_secs(1)) => {
-                info!("Waiting for implementation...");
-            }
-        }
-    }
-    
-    info!("👋 Shutting down gracefully");
     Ok(())
 }
-
-// TODO Phase 6: Implement opportunity handler
-// async fn handle_opportunity(
-//     _opp: arbitrage::ArbitrageOpportunity,
-//     _executor: &execution::TradeExecutor,
-// ) -> Result<()> {
-//     // TODO:
-//     // 1. Validate opportunity is still profitable
-//     // 2. Build transaction
-//     // 3. Simulate
-//     // 4. Execute if simulation successful
-//     // 5. Log result
-//     todo!("Handle arbitrage opportunity")
-// }

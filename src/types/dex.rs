@@ -322,10 +322,6 @@ impl UpdateTrigger {
     }
 }
 
-// ============================================================================
-// EXAMPLE USAGE
-// ============================================================================
-
 #[cfg(test)]
 mod tests {
     use crate::types::{DexId, Price, PriceSource, TokenInfo};

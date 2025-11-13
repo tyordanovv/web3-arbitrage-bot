@@ -1,36 +1,16 @@
-use crate::{dex::adapter::DexAdapter, types::{DexId, HealthStatus, Price, PriceUpdate, Result, SyncResult, TokenPair}};
+use crate::{dex::adapter::DexAdapter, types::{DexId, HealthStatus, Price, Result, StateSnapshot, SyncResult, TokenPair}};
 use std::collections::HashMap;
-use tokio::sync::broadcast;
-
-/// Configuration for DexManager
-#[derive(Debug, Clone)]
-pub struct ManagerConfig {
-    pub price_update_buffer_size: usize,
-}
-
-impl Default for ManagerConfig {
-    fn default() -> Self {
-        Self {
-            price_update_buffer_size: 1000,
-        }
-    }
-}
 
 /// Manages all DEX adapters
 pub struct DexManager {
     dexes: HashMap<DexId, Box<dyn DexAdapter>>,
-    price_broadcaster: broadcast::Sender<PriceUpdate>,
-    config: ManagerConfig,
 }
 
 impl DexManager {
-    pub fn new(config: ManagerConfig) -> Self {
-        let (price_broadcaster, _) = broadcast::channel(config.price_update_buffer_size);
+    pub fn new() -> Self {
         
         Self {
             dexes: HashMap::new(),
-            price_broadcaster,
-            config,
         }
     }
     
@@ -74,7 +54,7 @@ impl DexManager {
     /// Get healthy DEXs
     pub fn healthy_dexes(&self) -> Vec<DexId> {
         // TODO: Filter DEXs by is_healthy()
-        todo!("Get list of healthy DEXs")
+        vec![]
     }
     
     // TODO Phase 5: Health & sync operations
@@ -92,16 +72,8 @@ impl DexManager {
         // TODO: Collect results
         todo!("Sync all DEXs")
     }
-    
-    /// Broadcast price update to subscribers
-    pub fn broadcast_price_update(&self, _update: PriceUpdate) -> Result<()> {
-        // TODO: Send update via broadcast channel
-        // Hint: self.price_broadcaster.send(update)
-        todo!("Broadcast price update")
-    }
-    
-    /// Subscribe to price updates
-    pub fn subscribe_price_updates(&self) -> broadcast::Receiver<PriceUpdate> {
-        self.price_broadcaster.subscribe()
-    }
+
+    pub fn get_state_snapshot(&self) -> Result<StateSnapshot>{
+        todo!("get_state_snapshot")
+    } 
 }

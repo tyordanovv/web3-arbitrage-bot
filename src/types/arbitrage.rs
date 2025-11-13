@@ -197,67 +197,6 @@ impl ArbitrageOpportunity {
     }
 }
 
-// ============================================================================
-// Path Discovery Types
-// ============================================================================
-
-/// Configuration for path finding
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PathFinderConfig {
-    pub max_hops: usize,
-    pub min_liquidity_per_pool_usd: Decimal,
-    pub max_price_impact_percent: Decimal,
-    pub intermediate_tokens: Vec<TokenInfo>,
-    pub allowed_dexes: Vec<DexId>,
-    pub allow_cross_chain: bool,
-    pub min_profit_threshold: Decimal,
-    pub min_profit_percent: Decimal,
-}
-
-impl Default for PathFinderConfig {
-    fn default() -> Self {
-        Self {
-            max_hops: 4,
-            min_liquidity_per_pool_usd: Decimal::from(10000),
-            max_price_impact_percent: Decimal::from(5),
-            intermediate_tokens: vec![],
-            allowed_dexes: DexId::all(),
-            allow_cross_chain: false,
-            min_profit_threshold: Decimal::from(1),
-            min_profit_percent: MIN_PROFIT_PERCENT,
-        }
-    }
-}
-
-/// Multi-hop transaction for executing arbitrage path
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MultiHopTransaction {
-    pub network: Network,
-    pub hops: Vec<ArbitrageHop>,
-    pub gas_budget: u64,
-    pub transaction_data: Vec<u8>,
-    pub estimated_gas: u64,
-}
-
-/// Result of executing multi-hop arbitrage
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ArbitrageExecutionResult {
-    pub success: bool,
-    pub transaction_digest: String,
-    pub actual_amounts: Vec<u64>,
-    pub gas_used: u64,
-    pub actual_profit: Decimal,
-    pub execution_time_ms: u64,
-    pub error: Option<String>,
-}
-
-impl ArbitrageExecutionResult {
-    /// Check if execution was profitable
-    pub fn was_profitable(&self) -> bool {
-        self.success && self.actual_profit > Decimal::ZERO
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use rust_decimal::Decimal;
