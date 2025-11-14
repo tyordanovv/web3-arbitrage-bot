@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use tokio::sync::mpsc;
+use tracing::info;
 use crate::types::{DexId, RawEvent, Result};
 
 #[async_trait]
@@ -36,13 +37,14 @@ impl DefaultWebSocketManager {
 impl WebSocketManager for DefaultWebSocketManager {
     async fn connect(&mut self) -> Result<()> {
         // TODO: Implement actual WebSocket connection
-        // For now, just mark as connected
         self.is_connected = true;
+        info!("WebSocket connected for DEX {}", self.dex_id);
         Ok(())
     }
     
     async fn disconnect(&mut self) -> Result<()> {
         self.is_connected = false;
+        info!("WebSocket disconnected for DEX {}", self.dex_id);
         Ok(())
     }
     

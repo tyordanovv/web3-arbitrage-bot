@@ -3,7 +3,12 @@ use tokio::sync::{RwLock, mpsc};
 use tracing::info;
 use std::{collections::HashMap, sync::Arc};
 
-use crate::{dex::manager::DexManager, event::websocket::{DefaultWebSocketManager, WebSocketManager}, types::{DexId, RawEvent, Result, SwapEvent}, utils::config::NetworkConfig};
+use crate::{
+    dex::manager::DexManager, 
+    event::websocket::{ DefaultWebSocketManager, WebSocketManager }, 
+    types::{ DexId, RawEvent, Result, SwapEvent }, 
+    utils::config::NetworkConfig
+};
 
 #[async_trait]
 pub trait EventProcessor: Send + Sync {
@@ -115,6 +120,7 @@ impl EventProcessor for DefaultEventProcessor {
         if !self.is_running {
             return Ok(());
         }
+        info!("Stopping Event Processor...");
         
         self.is_running = false;
         
@@ -128,7 +134,7 @@ impl EventProcessor for DefaultEventProcessor {
             task.abort();
         }
         
-        tracing::info!("Event processor stopped");
+        info!("Event processor stopped");
         Ok(())
     }
     
