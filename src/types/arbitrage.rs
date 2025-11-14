@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use crate::types::{BotError, DexId, MIN_PROFIT_PERCENT, Network, PoolId, Result, Timestamp, TokenInfo, TokenPair, now};
+use crate::types::{BotError, DexId, Network, PoolId, Result, Timestamp, TokenInfo, TokenPair, now};
 
 /// A single hop in an arbitrage path
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -201,7 +201,7 @@ impl ArbitrageOpportunity {
 mod tests {
     use rust_decimal::Decimal;
 
-    use crate::types::{DEX_SWAP_FEE_RATE, DexId, Network, TokenInfo, TokenPair, now};
+    use crate::types::{DEX_SWAP_FEE_RATE, DexId, MIN_PROFIT_PERCENT, Network, TokenInfo, TokenPair, now};
 
     use super::*;
     

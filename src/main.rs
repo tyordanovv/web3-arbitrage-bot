@@ -1,7 +1,3 @@
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(unused_must_use)]
-
 use std::sync::Arc;
 
 use arbitrage_bot::{arbitrage::{arbitrage_engine::{ArbitrageEngine, ArbitrageEngineBuilder}, calculator::{ArbitrageCalculator, DefaultArbitrageCalculator}, detector::{ArbitrageDetector, DefaultArbitrageDetector}, validator::{DefaultOpportunityValidator, OpportunityValidator}}, dex::manager::DexManager, event::processor::{DefaultEventProcessor, EventProcessor}, execution::executor::{DefaultTradeExecutor, TradeExecutor}, types::Result, utils::{config::Config, logger::init}};
@@ -16,7 +12,7 @@ async fn main() -> Result<()> {
     let config = Config::load()?;
     
     // 1. Create and initialize DexManager
-    let mut dex_manager = DexManager::new();
+    let dex_manager = DexManager::new();
     let dex_manager = Arc::new(RwLock::new(dex_manager));
     
     // 2. Create components

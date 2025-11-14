@@ -1,0 +1,12 @@
+1. real time update 
+Event Processor -> Dex Manager: a swap just happened on Cetus, update your pools
+
+2. detection loop 50hz around 20ms
+Engine -> Detector: find me opportunities right now
+Detector -> Dex Manager: give me current state snapshot
+Dex Manager -> Detector: here is all prices at this exact moment
+Detector -> Engine: here is all opportunities at this exact moment
+
+3. execution flow
+Validator -> Dex Manager: "Is this opportunity still good with current prices?"
+Executor -> Network: "Execute this arbitrage trade!"
