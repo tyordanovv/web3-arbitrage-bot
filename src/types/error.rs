@@ -11,9 +11,6 @@ pub enum BotError {
     #[error("Event error: {0}")]
     Event(String),
     
-    #[error("RPC error: {0}")]
-    Rpc(String),
-    
     #[error("WebSocket error: {0}")]
     WebSocket(String),
     

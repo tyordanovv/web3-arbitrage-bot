@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{dex::state::DexState, types::{DexId, HealthStatus, PoolId, PoolState, Price, PriceUpdate, RawEvent, Result, SwapEvent, SyncResult, TokenPair}};
+use crate::{dex::state::DexState, types::{DexId, HealthStatus, PoolId, PoolState, Price, PriceUpdate, RawEvent, Result, SwapEvent, TokenPair}};
 
 #[async_trait]
 pub trait DexAdapter: Send + Sync {
@@ -33,6 +33,5 @@ pub trait DexAdapter: Send + Sync {
     
     // ========== HEALTH & SYNC ==========
     async fn heartbeat(&mut self) -> Result<HealthStatus>;
-    async fn periodic_sync(&mut self) -> Result<SyncResult>;
     fn is_healthy(&self) -> bool;
 }

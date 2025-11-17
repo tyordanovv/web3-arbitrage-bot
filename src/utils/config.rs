@@ -11,9 +11,6 @@ pub struct Config {
     /// Network settings
     pub network: NetworkConfig,
     
-    /// DEX configurations
-    pub dexes: Vec<DexConfig>,
-    
     /// Arbitrage settings
     pub arbitrage: ArbitrageConfig,
     
@@ -33,6 +30,7 @@ pub struct NetworkConfig {
     pub network: Network,
     pub rpc_url: String,
     pub ws_url: String,
+    pub dexes: Vec<DexConfig>,
 }
 
 impl Default for NetworkConfig {
@@ -41,6 +39,7 @@ impl Default for NetworkConfig {
             network: Network::SuiTestnet,
             rpc_url: "https://fullnode.testnet.sui.io:443".into(),
             ws_url: "wss://fullnode.testnet.sui.io:443".into(),
+            dexes: vec![],
         }
     }
 }
@@ -50,6 +49,7 @@ impl Default for NetworkConfig {
 pub struct DexConfig {
     pub id: DexId,
     pub package_id: String,
+    pub event_type: String,
     pub enabled: bool,
     pub pools: Vec<PoolConfig>,
 }
@@ -166,7 +166,6 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             network: NetworkConfig::default(),
-            dexes: vec![],
             arbitrage: ArbitrageConfig::default(),
             execution: ExecutionConfig::default(),
             validation: ValidationConfig::default(),
@@ -233,7 +232,7 @@ impl Config {
     
     /// Get enabled DEXs
     pub fn enabled_dexes(&self) -> Vec<&DexConfig> {
-        self.dexes.iter().filter(|d| d.enabled).collect()
+        self.network.dexes.iter().filter(|d| d.enabled).collect()
     }
     
     /// Validate configuration

@@ -57,7 +57,7 @@ impl ArbitrageEngine {
     
     /// Start the complete arbitrage engine - SIMPLE POLLING
     pub async fn start(&mut self) -> Result<()> {
-        info!("🚀 Starting Arbitrage Engine...");
+        info!("Starting Arbitrage Engine...");
         
         if self.is_running {
             warn!("Engine is already running");

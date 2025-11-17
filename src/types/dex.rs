@@ -106,54 +106,6 @@ pub struct HealthDetails {
     pub avg_response_time_ms: Option<u64>,
 }
 
-/// Result of a sync operation
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SyncResult {
-    pub success: bool,
-    pub pools_synced: usize,
-    pub pools_failed: usize,
-    pub duration_ms: u64,
-    pub errors: Vec<String>,
-    pub updated_pools: Vec<PoolId>,
-    pub sync_type: SyncType,
-}
-
-impl SyncResult {
-    /// Create a successful sync result
-    pub fn success(pools_synced: usize, duration_ms: u64) -> Self {
-        Self {
-            success: true,
-            pools_synced,
-            pools_failed: 0,
-            duration_ms,
-            errors: Vec::new(),
-            updated_pools: Vec::new(),
-            sync_type: SyncType::Full,
-        }
-    }
-    
-    /// Create a failed sync result
-    pub fn failure(errors: Vec<String>) -> Self {
-        Self {
-            success: false,
-            pools_synced: 0,
-            pools_failed: 0,
-            duration_ms: 0,
-            errors,
-            updated_pools: Vec::new(),
-            sync_type: SyncType::Full,
-        }
-    }
-}
-
-/// Type of sync operation
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum SyncType {
-    Full,
-    Partial,
-    Heartbeat,
-}
-
 /// Raw event received from WebSocket
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RawEvent {
@@ -213,6 +165,21 @@ pub struct SwapEvent {
 }
 
 impl SwapEvent {
+    pub fn new() -> Self {
+        Self {
+            dex_id: DexId::Cetus,
+            pool_id: PoolId::default(),
+            amount_in: 0,
+            amount_out: 0,
+            base_to_quote: true,
+            timestamp: now(),
+            transaction_digest: String::new(),
+            sender: None,
+            block_height: None,
+            sequence: None,
+        }
+    }
+
     pub fn direction_str(&self) -> &'static str {
         if self.base_to_quote {
             "BASE -> QUOTE"
@@ -362,15 +329,6 @@ mod tests {
         
         let unhealthy = HealthStatus::unhealthy("Connection lost", 3);
         assert!(!unhealthy.is_healthy);
-    }
-    
-    #[test]
-    fn test_sync_result() {
-        let result_suc = SyncResult::success(10, 500);
-        assert!(result_suc.success);
-        
-        let result_err = SyncResult::failure(vec!["Connection lost".to_string()]);
-        assert!(!result_err.success);
     }
     
     #[test]

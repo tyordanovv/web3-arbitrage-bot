@@ -1,5 +1,7 @@
 /target
+/docs
 
 roadmap.md
 
 .env
+.env.dev

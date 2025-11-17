@@ -1,4 +1,4 @@
-use crate::{dex::adapter::DexAdapter, types::{DexId, HealthStatus, Price, Result, StateSnapshot, SyncResult, TokenPair}};
+use crate::{dex::adapter::DexAdapter, types::{DexId, HealthStatus, Network, Price, Result, StateSnapshot, TokenPair}};
 use std::collections::HashMap;
 
 /// Manages all DEX adapters
@@ -52,9 +52,9 @@ impl DexManager {
     }
     
     /// Get healthy DEXs
-    pub fn healthy_dexes(&self) -> Vec<DexId> {
-        // TODO: Filter DEXs by is_healthy()
-        vec![]
+    pub fn healthy_dexes(&self) -> HashMap<Network, Vec<DexId>> {
+        // Filter DEXs by is_healthy()
+        HashMap::new()
     }
     
     // TODO Phase 5: Health & sync operations
@@ -64,13 +64,6 @@ impl DexManager {
         // TODO: Call heartbeat() on each DEX
         // TODO: Collect results
         todo!("Heartbeat all DEXs")
-    }
-    
-    /// Perform periodic sync for all DEXs
-    pub async fn sync_all(&mut self) -> Result<HashMap<DexId, SyncResult>> {
-        // TODO: Call periodic_sync() on each DEX
-        // TODO: Collect results
-        todo!("Sync all DEXs")
     }
 
     pub fn get_state_snapshot(&self) -> Result<StateSnapshot>{
