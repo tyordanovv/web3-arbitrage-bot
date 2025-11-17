@@ -1,0 +1,90 @@
+[network]
+network = "SuiMainnet"
+rpc_url = "https://fullnode.mainnet.sui.io:443"
+ws_url = "wss://fullnode.mainnet.sui.io:443"
+
+[[network.dexes]]
+id = "Cetus"
+package_id = "0x686e66a7a993b58e3e5c0f633c0541d1a67b8b81c6728bfc53b317c355d4d2e0"
+event_type = "SwapEvent"
+enabled = true
+
+[[network.dexes.pools]]
+address = "0x..."
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x..."
+token_a = { symbol = "USDT", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x..."
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "USDT", decimals = 6 }
+
+[[network.dexes]]
+id = "Turbos"
+package_id = "0x..."
+event_type = "SwapEvent"
+enabled = true
+
+[[network.dexes.pools]]
+address = "0x..."
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x..."
+token_a = { symbol = "ETH", decimals = 8 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x..."
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "ETH", decimals = 8 }
+
+[[network.dexes]]
+id = "Kriya"
+package_id = "0x..."
+event_type = "SwapEvent"
+enabled = true
+
+[[network.dexes.pools]]
+address = "0x..."
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x..."
+token_a = { symbol = "BTC", decimals = 8 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x..."
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "BTC", decimals = 8 }
+
+[arbitrage]
+max_hops = 4
+min_liquidity_per_pool_usd = 10000
+max_price_impact_percent = 5.0
+min_profit_threshold = 1.0
+min_profit_percent = 0.5
+
+[execution]
+dry_run = true
+gas_budget = 10000000
+slippage_tolerance_percent = 1.0
+
+[validation]
+max_opportunity_age_ms = 2000
+min_pool_liquidity_usd = 1000
+max_price_divergence_percent = 5.0
+revalidate_before_execution = true
+max_gas_cost_percent = 50.0
+
+[logging]
+level = "info"
+enable_metrics = true

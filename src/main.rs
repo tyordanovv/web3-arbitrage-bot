@@ -10,6 +10,7 @@ async fn main() -> Result<()> {
     info!("Starting Arbitrage Bot");
     
     let config = Config::load()?;
+    config.validate()?;
     
     // 1. Create and initialize DexManager
     let dex_manager = DexManager::new();

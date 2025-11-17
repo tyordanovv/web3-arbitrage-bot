@@ -20,18 +20,24 @@ pub fn now() -> Timestamp {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DexId {
     Cetus,
+    Turbos,
+    Kriya,
 }
 
 impl DexId {
     pub fn all() -> Vec<DexId> {
         vec![
             DexId::Cetus,
+            DexId::Turbos,
+            DexId::Kriya,
         ]
     }
 
     pub fn name(&self) -> &'static str {
         match self {
             DexId::Cetus => "Cetus",
+            DexId::Turbos => "Turbos",
+            DexId::Kriya => "Kriya",
         }
     }
 }
@@ -91,8 +97,10 @@ impl fmt::Display for Network {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TokenInfo {
     pub symbol: String,
-    pub address: String,
+    #[serde(default)]
+    pub address: Option<String>,
     pub decimals: u8,
+    #[serde(default)]
     pub name: Option<String>,
 }
 
@@ -100,7 +108,7 @@ impl TokenInfo {
     pub fn new(symbol: impl Into<String>, address: impl Into<String>, decimals: u8) -> Self {
         Self {
             symbol: symbol.into(),
-            address: address.into(),
+            address: Some(address.into()),
             decimals,
             name: None,
         }
