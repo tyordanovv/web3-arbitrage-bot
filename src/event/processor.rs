@@ -1,13 +1,13 @@
 use async_trait::async_trait;
-use tokio::sync::{RwLock, mpsc};
-use tracing::info;
+use tokio::{sync::{ RwLock, mpsc }, task::JoinHandle};
+use tracing::{info, warn};
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     dex::manager::DexManager, 
-    event::websocket::{ DefaultWebSocketManager, WebSocketManager }, 
-    types::{ DexId, RawEvent, Result, SwapEvent }, 
-    utils::config::NetworkConfig
+    event::{context::WsContext, websocket::{DexWebSocket, WebSocketManager}}, 
+    types::{ BotError, DexId, Network, RawEvent, Result, SwapEvent }, 
+    utils::config::{DexConfig, NetworkConfig}
 };
 
 #[async_trait]
@@ -17,9 +17,6 @@ pub trait EventProcessor: Send + Sync {
     
     /// Stop all event processing
     async fn stop(&mut self) -> Result<()>;
-    
-    /// Subscribe to parsed swap events
-    fn subscribe_swap_events(&self) -> mpsc::Receiver<SwapEvent>;
     
     /// Get processing status for each DEX
     async fn get_status(&self) -> HashMap<DexId, ProcessorStatus>;
@@ -33,63 +30,95 @@ pub struct ProcessorStatus {
     pub error_count: u64,
 }
 
-// Default implementation
 pub struct DefaultEventProcessor {
     dex_manager: Arc<RwLock<DexManager>>,
-    websocket_managers: HashMap<DexId, Box<dyn WebSocketManager>>,
-    swap_sender: mpsc::Sender<SwapEvent>,
-    swap_receiver: mpsc::Receiver<SwapEvent>,
-    processor_tasks: HashMap<DexId, tokio::task::JoinHandle<()>>,
+    ws_managers: HashMap<DexId, JoinHandle<()>>,
     is_running: bool,
     network_config: NetworkConfig,
+    dex_configs: HashMap<DexId, DexConfig>,
 }
 
 impl DefaultEventProcessor {
     pub fn new(
         dex_manager: Arc<RwLock<DexManager>>,
         network_config: NetworkConfig,
-    ) -> Self {
-        let (swap_sender, swap_receiver) = mpsc::channel(1000);
-        
+    ) -> Self {      
+        let dex_configs = network_config.dexes
+            .iter()
+            .map(|config| (config.id, config.clone()))
+            .collect();
+
         Self {
             dex_manager,
-            websocket_managers: HashMap::new(),
-            swap_sender,
-            swap_receiver,
-            processor_tasks: HashMap::new(),
+            ws_managers: HashMap::new(),
             is_running: false,
-            network_config
+            network_config,
+            dex_configs,
         }
-    }
-    
-    /// Initialize WebSocket managers for all enabled DEXs
-    pub async fn initialize_websockets(&mut self, dex_ids: Vec<DexId>) -> Result<()> {
-        info!("Initializing WebSocket managers for DEXs: {:?}", dex_ids);
-        for dex_id in dex_ids {
-            let ws_manager = Box::new(DefaultWebSocketManager::new(
-                dex_id,
-                self.network_config.ws_url.to_string(),
-            ));
-            self.websocket_managers.insert(dex_id, ws_manager);
-            info!("WebSocket manager initialized for DEX {}", dex_id);
-        }
-        Ok(())
-    }
-    
-    async fn start_dex_processor(&mut self, dex_id: DexId) -> Result<()> {
-        info!("Starting event processor for DEX {}", dex_id);
-        Ok(())
-    }
-    
-    fn parse_raw_event(dex_id: DexId, raw_event: RawEvent) -> Result<SwapEvent> {
-        // TODO: Implement DEX-specific event parsing
-        // This would convert raw WebSocket data to normalized SwapEvent
-        todo!("Parse raw event for {}", dex_id)
     }
 
-    async fn get_enabled_dex_ids(&self) -> Result<Vec<DexId>> {
+    /// Initialize WebSocket managers for all enabled DEXs
+    async fn initialize_websockets(&mut self, event_sender: mpsc::Sender<(DexId, RawEvent)>) -> Result<()> {        
+        let enabled_dexes = self.get_enabled_dex_ids().await?;
+        info!("Found {} enabled DEXs: {:?}", enabled_dexes.values().flatten().count(), enabled_dexes);
+        
+        if enabled_dexes.is_empty() {
+            warn!("No DEXs enabled - check your DexManager configuration");
+            return Ok(());
+        }   
+
+        for (network, dex_ids) in self.get_enabled_dex_ids().await? {
+            for dex_id in dex_ids {
+                info!("Initializing WS for DEX {:?} on network {:?}", dex_id, network);
+                
+                let mut ws = self.build_ws_manager_from_config(&dex_id, network)?;
+                let sender = event_sender.clone();
+                
+                let handle = tokio::spawn(async move {
+                    let ctx = Arc::new(WsContext {
+                        dex_id,
+                        network,
+                        tx: sender,
+                    });
+                    ws.connect(ctx).await.ok();
+                });
+                
+                self.ws_managers.insert(dex_id, handle);
+            }
+        }
+        Ok(())
+    }
+
+    async fn process_event(&self, dex_id: DexId, raw_event: RawEvent) -> Result<SwapEvent> {
+        info!("Processing event for DEX {:?}: {:?}", dex_id, raw_event);
+        Ok(SwapEvent::new())
+    }
+
+    async fn get_enabled_dex_ids(&self) -> Result<HashMap<Network, Vec<DexId>>> {
         let manager = self.dex_manager.read().await;
         Ok(manager.healthy_dexes())
+    }
+
+    fn build_ws_manager_from_config(
+        &self, 
+        dex_id: &DexId, 
+        network: Network
+    ) -> Result<Box<dyn WebSocketManager>> {
+        let dex_config = self.dex_configs
+            .get(dex_id)
+            .ok_or_else(|| BotError::Config(format!("No config found for DEX: {:?}", dex_id)))?;
+
+        match network {
+            Network::SuiMainnet => Ok(Box::new(DexWebSocket::new(
+                &self.network_config.ws_url,
+                &dex_config.package_id,
+                &dex_config.event_type,
+            ))),
+            _ => {
+                // TODO: Implement AptosDexWs
+                Err(BotError::Config("Aptos not yet implemented".to_string()))
+            }
+        }
     }
 }
 
@@ -98,21 +127,27 @@ impl EventProcessor for DefaultEventProcessor {
     async fn start(&mut self) -> Result<()> {
         info!("Starting Event Processor...");
         if self.is_running {
-            info!("Event processor already running");
             return Ok(());
         }
         
         self.is_running = true;
+        let (event_sender, mut event_receiver) = mpsc::channel(5000);
+
+        self.initialize_websockets(event_sender).await?;
         
-        let enabled_dex_ids = self.get_enabled_dex_ids().await?;
-        
-        self.initialize_websockets(enabled_dex_ids).await?;
-        
-        for dex_id in self.websocket_managers.keys().cloned().collect::<Vec<_>>() {
-            self.start_dex_processor(dex_id).await?;
-        }
-        
-        tracing::info!("Event processor started with {} DEXs", self.websocket_managers.len());
+        let dex_manager = self.dex_manager.clone();
+        tokio::spawn(async move {
+            info!("Event processing loop started");
+            
+            while let Some((dex_id, raw_event)) = event_receiver.recv().await {
+                info!("Processing event for {:?}", dex_id);
+                // TODO
+            }
+            
+            info!("Event processing loop stopped");
+        });
+                
+        info!("Event processor started");
         Ok(())
     }
     
@@ -125,21 +160,9 @@ impl EventProcessor for DefaultEventProcessor {
         self.is_running = false;
         
         // Stop all WebSocket connections
-        for ws_manager in self.websocket_managers.values_mut() {
-            ws_manager.disconnect().await?;
-        }
-        
-        // Cancel all processor tasks
-        for (_, task) in self.processor_tasks.drain() {
-            task.abort();
-        }
         
         info!("Event processor stopped");
         Ok(())
-    }
-    
-    fn subscribe_swap_events(&self) -> mpsc::Receiver<SwapEvent> {
-        todo!("Return receiver for parsed swap events")
     }
     
     async fn get_status(&self) -> HashMap<DexId, ProcessorStatus> {

@@ -66,6 +66,8 @@ impl FromStr for DexId {
 /// TODO AptosTestnet
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Network {
+    AptosTestnet,
+    AptosMainnet,
     SuiTestnet,
     SuiMainnet
 }
@@ -83,6 +85,8 @@ impl Network {
 impl fmt::Display for Network {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Network::AptosTestnet => write!(f, "aptos-testnet"),
+            Network::AptosMainnet => write!(f, "aptos-mainnet"),
             Network::SuiTestnet => write!(f, "sui-testnet"),
             Network::SuiMainnet => write!(f, "sui-mainnet")
         }
