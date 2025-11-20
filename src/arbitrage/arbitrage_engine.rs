@@ -1,7 +1,7 @@
-use tracing::{ info, debug, warn };
+use tracing::{ debug, error, info, warn };
 
-use crate::{arbitrage::{detector::ArbitrageDetector, validator::OpportunityValidator}, event::processor::EventProcessor, execution::executor::TradeExecutor, types::{ArbitrageOpportunity, ExecutionResult, Result}};
-use std::time::Duration;
+use crate::{arbitrage::{detector::ArbitrageDetector, validator::OpportunityValidator}, event::processor::EventProcessor, execution::executor::TradeExecutor, sync::synchronizer::SyncOrchestrator, types::{ArbitrageOpportunity, ExecutionResult, Result}};
+use std::{sync::Arc, time::Duration};
 
 pub struct ArbitrageEngine {
     // Components
@@ -9,10 +9,12 @@ pub struct ArbitrageEngine {
     detector: Box<dyn ArbitrageDetector>,
     executor: Box<dyn TradeExecutor>,
     validator: Box<dyn OpportunityValidator>,
+    sync_orchestrator: Arc<SyncOrchestrator>,
     
     // State
     is_running: bool,
     stats: EngineStats,
+    last_sync_time: std::time::Instant,
 }
 
 #[derive(Debug, Clone)]
@@ -44,17 +46,20 @@ impl ArbitrageEngine {
         detector: Box<dyn ArbitrageDetector>,
         executor: Box<dyn TradeExecutor>,
         validator: Box<dyn OpportunityValidator>,
+        sync_orchestrator: Arc<SyncOrchestrator>,
     ) -> Self {
         Self {
             event_processor,
             detector,
             executor,
             validator,
+            sync_orchestrator,
             is_running: false,
             stats: EngineStats::default(),
+            last_sync_time: std::time::Instant::now(),
         }
     }
-    
+
     /// Start the complete arbitrage engine - SIMPLE POLLING
     pub async fn start(&mut self) -> Result<()> {
         info!("Starting Arbitrage Engine...");
@@ -78,12 +83,22 @@ impl ArbitrageEngine {
     
     async fn run_main_loop(&mut self) -> Result<()> {
         let mut interval = tokio::time::interval(Duration::from_millis(20)); // 50Hz
+        let mut sync_interval = tokio::time::interval(Duration::from_secs(3600)); // 1 hour
         
         while self.is_running {
             tokio::select! {
                 _ = interval.tick() => {
                     let opportunity = self.detector.next_opportunity().await;
-                    // TODO process opportunities
+                    self.process_opportunity(opportunity).await;
+                }
+                _ = sync_interval.tick() => {
+                    info!("Running periodic state synchronization...");
+                    if let Err(e) = self.sync_orchestrator.sync_all_pools().await {
+                        error!("Periodic sync failed: {}", e);
+                    } else {
+                        self.last_sync_time = std::time::Instant::now();
+                        info!("Periodic sync completed");
+                    }
                 }
                 _ = self.check_shutdown_signal() => {
                     self.stop().await?;
@@ -95,6 +110,7 @@ impl ArbitrageEngine {
         
         Ok(())
     }
+
     
     /// Process batch of opportunities
     async fn process_opportunity(&mut self, opportunity: Option<ArbitrageOpportunity>) {
@@ -145,6 +161,7 @@ pub struct ArbitrageEngineBuilder {
     detector: Option<Box<dyn ArbitrageDetector>>,
     executor: Option<Box<dyn TradeExecutor>>,
     validator: Option<Box<dyn OpportunityValidator>>,
+    sync_orchestrator: Option<Arc<SyncOrchestrator>>,
 }
 
 impl ArbitrageEngineBuilder {
@@ -154,6 +171,7 @@ impl ArbitrageEngineBuilder {
             detector: None,
             executor: None,
             validator: None,
+            sync_orchestrator: None,
         }
     }
     
@@ -176,6 +194,11 @@ impl ArbitrageEngineBuilder {
         self.validator = Some(validator);
         self
     }
+
+    pub fn with_sync_orchestrator(mut self, sync_orchestrator: Arc<SyncOrchestrator>) -> Self {
+        self.sync_orchestrator = Some(sync_orchestrator);
+        self
+    }
     
     pub fn build(self) -> Result<ArbitrageEngine> {
         Ok(ArbitrageEngine::new(
@@ -183,6 +206,7 @@ impl ArbitrageEngineBuilder {
             self.detector.expect("Detector is required"),
             self.executor.expect("Executor is required"),
             self.validator.expect("Validator is required"),
+            self.sync_orchestrator.expect("State synchronizer is required"),
         ))
     }
 }

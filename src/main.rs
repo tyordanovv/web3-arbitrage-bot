@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use arbitrage_bot::{arbitrage::{arbitrage_engine::{ArbitrageEngine, ArbitrageEngineBuilder}, calculator::{ArbitrageCalculator, DefaultArbitrageCalculator}, detector::{ArbitrageDetector, DefaultArbitrageDetector}, validator::{DefaultOpportunityValidator, OpportunityValidator}}, dex::manager::DexManager, event::processor::{DefaultEventProcessor, EventProcessor}, execution::executor::{DefaultTradeExecutor, TradeExecutor}, types::Result, utils::{config::Config, logger::init}};
+use arbitrage_bot::{arbitrage::{arbitrage_engine::{ArbitrageEngine, ArbitrageEngineBuilder}, calculator::{ArbitrageCalculator, DefaultArbitrageCalculator}, detector::{ArbitrageDetector, DefaultArbitrageDetector}, validator::{DefaultOpportunityValidator, OpportunityValidator}}, dex::manager::DexManager, event::processor::{DefaultEventProcessor, EventProcessor}, execution::executor::{DefaultTradeExecutor, TradeExecutor}, sync::synchronizer::SyncOrchestratorBuilder, types::Result, utils::{config::Config, logger::init}};
 use tokio::sync::RwLock;
 use tracing::{info, error};
 
@@ -12,11 +12,25 @@ async fn main() -> Result<()> {
     let config = Config::load()?;
     config.validate()?;
     
-    // 1. Create and initialize DexManager
-    let dex_manager = DexManager::new();
-    let dex_manager = Arc::new(RwLock::new(dex_manager));
+    let dex_manager = DexManager::with_config(
+        config.sync_config().max_pools_per_dex,
+        config.sync_config().state_ttl(),
+    );    let dex_manager = Arc::new(RwLock::new(dex_manager));
     
-    // 2. Create components
+    let orchestrator = Arc::new(SyncOrchestratorBuilder::new()
+        .with_dex_manager(dex_manager.clone())
+        .with_rpc_endpoint(config.network_config().rpc_url.clone())
+        .with_config(config.sync_config().clone())
+        .build()?
+    );
+    
+    info!("Performing initial state synchronization...");
+    if let Err(e) = orchestrator.initialize().await {
+        error!("Initial synchronization failed: {}", e);
+        return Err(e);
+    }
+    info!("Initial synchronization completed successfully");
+
     let event_processor = Box::new(DefaultEventProcessor::new(
         dex_manager.clone(),
         config.network_config().clone(),
@@ -40,15 +54,14 @@ async fn main() -> Result<()> {
         config.validation_config().clone(),
     )) as Box<dyn OpportunityValidator>;
     
-    // 3. Create engine
     let engine = ArbitrageEngineBuilder::new()
         .with_event_processor(event_processor)
         .with_detector(detector)
         .with_executor(executor)
         .with_validator(validator)
+        .with_sync_orchestrator(orchestrator)
         .build()?;
 
-    // 4. Setup graceful shutdown
     setup_graceful_shutdown(engine).await
 }
 
