@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 
-use crate::{types::{DexId, HealthStatus, PoolId, PoolState, Price, PriceUpdate, RawEvent, Result, SwapEvent, TokenPair}};
+use crate::{types::{DexId, HealthStatus, pool_state::{ PoolId, PoolState}, Price, PriceUpdate, RawEvent, Result, SwapEvent, TokenPair}};
 
 #[async_trait]
 pub trait DexState: Send + Sync {

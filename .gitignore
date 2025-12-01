@@ -5,3 +5,5 @@ roadmap.md
 
 .env
 config.toml
+
+/scripts/node_modules

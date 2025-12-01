@@ -1,9 +1,9 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use tokio::sync::RwLock;
 use tracing::{debug, info, error};
 
-use crate::{dex::manager::DexManager, types::{PoolId, PoolState, Result}};
+use crate::{dex::manager::DexManager, types::{DexId, Network, Result, pool_state::{ PoolId, PoolState}}};
 
 pub struct StateManager {
     dex_manager: Arc<RwLock<DexManager>>,
@@ -15,7 +15,7 @@ impl StateManager {
     }
 
     pub async fn update_pool(&self, pool_state: PoolState) -> Result<()> {
-        debug!("Updating pool state for pool: {}", pool_state.pool_id);
+        debug!("Updating pool state for pool: {:?}", pool_state.pool_id);
         
         let mut manager = self.dex_manager.write().await;
         manager.update_pool_state(pool_state).await?;
@@ -35,10 +35,10 @@ impl StateManager {
             match manager.update_pool_state(pool_state.clone()).await {
                 Ok(_) => {
                     success_count += 1;
-                    debug!("Updated pool: {}", pool_state.pool_id);
+                    debug!("Updated pool: {:?}", pool_state.pool_id);
                 }
                 Err(e) => {
-                    error!("Failed to update pool {}: {}", pool_state.pool_id, e);
+                    error!("Failed to update pool {:?}: {}", pool_state.pool_id, e);
                 }
             }
         }
@@ -47,10 +47,45 @@ impl StateManager {
         Ok(success_count)
     }
 
-    pub async fn get_monitored_pools(&self) -> Vec<PoolId> {
-        debug!("Retrieving monitored pools from state manager");
+    pub async fn get_monitored_pools_grouped(&self) -> HashMap<Network, HashMap<DexId, Vec<PoolId>>> {
+        let mut result: HashMap<Network, HashMap<DexId, Vec<PoolId>>> = HashMap::new();
+        let manager = self.dex_manager.read().await;        
+        
+        // Cache this to avoid repeated method calls
+        let monitored_pools: Vec<PoolId> = manager.get_monitored_pools().iter().cloned().collect();
+        info!("monitored pools {:?}", monitored_pools);
+        
+        for pool_id in &monitored_pools {
+            if let Some(dex_id) = manager.get_monitored_dex_by_pool_id(pool_id) {
+                result
+                    .entry(pool_id.network().clone())
+                    .or_default()
+                    .entry(*dex_id)
+                    .or_default()
+                    .push(pool_id.clone());
+            }
+        }
+        
+        result
+    }
+
+    pub async fn group_pools_by_network_and_dex(&self, pool_ids: &[PoolId]) -> HashMap<Network, HashMap<DexId, Vec<PoolId>>> {
+        let mut result: HashMap<Network, HashMap<DexId, Vec<PoolId>>> = HashMap::new();
+
         let manager = self.dex_manager.read().await;
-        manager.get_monitored_pools()
+                
+        for pool_id in pool_ids {
+            if let Some(dex_id) = manager.get_monitored_dex_by_pool_id(pool_id) {
+                result
+                    .entry(pool_id.network().clone())
+                    .or_default()
+                    .entry(*dex_id)
+                    .or_default()
+                    .push(pool_id.clone());
+            }
+        }
+        
+        result
     }
 
     pub async fn get_stale_pools(&self) -> Vec<PoolId> {

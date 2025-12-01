@@ -4,8 +4,9 @@ use std::fmt;
 use std::str::FromStr;
 use rust_decimal::prelude::ToPrimitive;
 
+use crate::types::{ChainAddress, SuiAddress};
+
 pub type Timestamp = u64;
-pub type PoolId = String;  
 
 pub fn now() -> Timestamp {
     chrono::Utc::now().timestamp_millis() as u64

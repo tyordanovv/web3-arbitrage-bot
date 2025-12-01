@@ -3,29 +3,38 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use tracing::{debug, info, error};
 
-use crate::{dex::state::DexState, types::{BotError, DexId, HealthStatus, PoolId, PoolState, Price, PriceUpdate, RawEvent, Result, SwapEvent, TokenPair}};
+use crate::{dex::state::DexState, types::{BotError, DexId, HealthStatus, Price, PriceUpdate, RawEvent, Result, SuiAddress, SwapEvent, TokenPair, pool_state::{ PoolId, PoolState}}, utils::config::DexConfig};
 
 pub struct CetusDexState {
     dex_id: DexId,
+    package_id: String,
+    event_type: String,
     pool_states: HashMap<PoolId, PoolState>,
     last_update: std::time::Instant,
     is_healthy: bool,
 }
 
 impl CetusDexState {
-    pub fn new() -> Self {
+    pub fn from_config(dex_config: &DexConfig) -> Self {
+        let mut init_pool_states: HashMap<PoolId, PoolState> = HashMap::new();
+        for pool in dex_config.pools {
+            init_pool_states.insert(PoolId::Sui(SuiAddress::new(pool.address)), PoolState::default());
+        }
         Self {
-            dex_id: DexId::Cetus,
+            dex_id: dex_config.id,
+            package_id: dex_config.package_id.clone(),
+            event_type: dex_config.event_type.clone(),
             pool_states: HashMap::new(),
             last_update: std::time::Instant::now(),
             is_healthy: false,
         }
     }
     
-    pub fn with_pools(initial_pools: Vec<PoolId>) -> Self {
-        let mut state = Self::new();
+    pub fn with_pools(package_id: String, event_type: String, initial_pools: Vec<PoolId>) -> Self {
+        let mut state = Self::new(package_id, event_type);
         for pool_id in initial_pools {
-            // TODO state.pool_states.insert(pool_id, PoolState::default());
+            // Initialize with default/empty pool states
+            state.pool_states.insert(pool_id, PoolState::default());
         }
         state
     }
@@ -52,7 +61,7 @@ impl DexState for CetusDexState {
     async fn get_pool_state(&self, pool_id: &PoolId) -> Result<PoolState> {
         self.pool_states.get(pool_id)
             .cloned()
-            .ok_or_else(|| BotError::Dex { dex: self.dex_id.clone(), message: format!("Pool {} not found", pool_id) })
+            .ok_or_else(|| BotError::Dex { dex: self.dex_id.clone(), message: format!("Pool {:?} not found", pool_id) })
     }
     
     async fn get_all_pool_states(&self) -> Result<Vec<PoolState>> {
@@ -67,7 +76,7 @@ impl DexState for CetusDexState {
     
     async fn fetch_pool_state(&self, pool_id: &PoolId) -> Result<PoolState> {
         // Implement actual RPC call to Cetus contract
-        debug!("Fetching pool state from Cetus RPC: {}", pool_id);
+        debug!("Fetching pool state from Cetus RPC: {:?}", pool_id);
         todo!("Implement Cetus RPC pool state fetching")
     }
     
@@ -76,7 +85,7 @@ impl DexState for CetusDexState {
         for pool_id in self.pool_states.keys() {
             match self.fetch_pool_state(pool_id).await {
                 Ok(state) => states.push(state),
-                Err(e) => error!("Failed to fetch pool {}: {}", pool_id, e),
+                Err(e) => error!("Failed to fetch pool {:?}: {}", pool_id, e),
             }
         }
         Ok(states)

@@ -1,6 +1,8 @@
+use std::result::Result::Ok;
+use sui_sdk::types::base_types::ObjectID;
 use tracing::{ info, debug, warn, error };
 
-use crate::{dex::state::DexState, types::{BotError, DexId, HealthStatus, Network, PoolId, PoolState, Price, Result, StateSnapshot, TokenPair}};
+use crate::{dex::{cetus::CetusDexState, state::DexState}, types::{BotError, ChainAddress, DexId, HealthStatus, Network, Price, Result, StateSnapshot, SuiAddress, Timestamp, TokenPair, now, pool, pool_state::{ PoolId, PoolState}}, utils::config::DexConfig};
 use std::{collections::{HashMap, HashSet}, u64};
 pub struct DexManager {
     dexes: HashMap<DexId, Box<dyn DexState>>,
@@ -8,7 +10,7 @@ pub struct DexManager {
     monitored_pools: HashSet<PoolId>,
     max_pools_per_dex: usize,
     state_ttl: std::time::Duration,
-    last_sync_time: std::time::Instant,
+    last_sync_time: Timestamp,
     sync_failures: u32,
 }
 
@@ -20,7 +22,7 @@ impl DexManager {
             monitored_pools: HashSet::new(),
             max_pools_per_dex: u64::MAX as usize,
             state_ttl: std::time::Duration::from_secs(3600),
-            last_sync_time: std::time::Instant::now(),
+            last_sync_time: now(),
             sync_failures: 0,
         }
     }
@@ -57,7 +59,7 @@ impl DexManager {
         self.pool_to_dex.insert(pool_id.clone(), dex_id.clone());
         self.monitored_pools.insert(pool_id.clone());
         
-        debug!("Registered pool {} for DEX {}", pool_id, dex_id);
+        debug!("Registered pool {:?} for DEX {}", pool_id, dex_id);
         Ok(())
     }
 
@@ -164,16 +166,21 @@ impl DexManager {
     pub fn get_stale_pools(&self) -> Vec<PoolId> {
         self.get_monitored_pools()
     }
+
+    pub fn get_monitored_dex_by_pool_id(&self, pool_id: &PoolId) -> Option<&DexId> {
+        self.pool_to_dex.get(pool_id)
+    }
     
     pub async fn update_pool_state(&mut self, pool_state: PoolState) -> Result<()> {
-        let dex_id = self.pool_to_dex.get(&pool_state.pool_id)
-            .ok_or_else(|| BotError::NotFound(format!("Pool {} not monitored", pool_state.pool_id)))?;
+        let dex_id = self.get_monitored_dex_by_pool_id(&pool_state.pool_id)
+            .cloned()
+            .ok_or_else(|| BotError::NotFound(format!("Pool {} is not monitored", &pool_state.pool_id)))?;
         
-        let dex = self.dexes.get_mut(dex_id)
+        let dex = self.dexes.get_mut(&dex_id)
             .ok_or_else(|| BotError::NotFound(format!("DEX {} not found", dex_id)))?;
         
         dex.update_pool_state(pool_state).await?;
-        self.last_sync_time = std::time::Instant::now();
+        self.last_sync_time = now();
         
         Ok(())
     }
@@ -188,18 +195,121 @@ impl DexManager {
         }
         
         if success_count > 0 {
-            self.last_sync_time = std::time::Instant::now();
+            self.last_sync_time = now();
         }
         
         Ok(success_count)
     }
     
-    pub fn last_sync_time(&self) -> std::time::Instant {
+    pub fn last_sync_time(&self) -> Timestamp {
         self.last_sync_time
     }
 }
 
 impl Default for DexManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub struct DexManagerBuilder {
+    max_pools_per_dex: Option<usize>,
+    state_ttl: Option<std::time::Duration>,
+    dex_configs: Vec<DexConfig>,
+}
+
+impl DexManagerBuilder {
+    pub fn new() -> Self {
+        Self {
+            max_pools_per_dex: None,
+            state_ttl: None,
+            dex_configs: Vec::new(),
+        }
+    }
+
+    pub fn with_max_pools_per_dex(mut self, max_pools: usize) -> Self {
+        self.max_pools_per_dex = Some(max_pools);
+        self
+    }
+
+    pub fn with_state_ttl(mut self, ttl: std::time::Duration) -> Self {
+        self.state_ttl = Some(ttl);
+        self
+    }
+
+    pub fn with_dex_configs(mut self, dex_configs: Vec<DexConfig>) -> Self {
+        self.dex_configs = dex_configs;
+        self
+    }
+
+    pub fn add_dex_config(mut self, dex_config: DexConfig) -> Self {
+        self.dex_configs.push(dex_config);
+        self
+    }
+
+    pub fn build(self) -> Result<DexManager> {
+        let max_pools_per_dex = self.max_pools_per_dex.unwrap_or(u64::MAX as usize);
+        let state_ttl = self.state_ttl.unwrap_or_else(|| std::time::Duration::from_secs(3600));
+
+        let mut dex_manager = DexManager::with_config(max_pools_per_dex, state_ttl);
+        
+        Self::register_dexes_and_pools(&mut dex_manager, &self.dex_configs)?;
+        
+        Ok(dex_manager)
+    }
+
+    fn register_dexes_and_pools(
+        dex_manager: &mut DexManager, 
+        dex_configs: &[DexConfig]
+    ) -> Result<()> {
+        info!("Registering DEXes and pools from config");
+        
+        for dex_config in dex_configs {
+            if !dex_config.enabled {
+                info!("Skipping disabled DEX: {}", dex_config.id);
+                continue;
+            }
+            
+            let dex_state: Box<dyn DexState> = Self::create_dex_state(dex_config)?;
+            dex_manager.register_dex(dex_state)?;
+            info!("Registered DEX: {}", dex_config.id);
+        }
+        
+        // Then register all pools for each DEX
+        for dex_config in dex_configs {
+            if !dex_config.enabled {
+                continue;
+            }
+                        
+            let pool_ids: Vec<PoolId> = dex_config.pools.iter()
+                .map(|pool_config| {
+                    let object_id = ObjectID::from_hex(&pool_config.address)
+                        .map_err(|e| BotError::Config(format!("Invalid pool address {}: {}", pool_config.address, e)))?;
+                    
+                    ChainAddress::Sui(SuiAddress::new(object_id))
+                })
+                .collect::<Result<Vec<_>>>()?;
+            
+            dex_manager.register_pools(&dex_config.id, pool_ids)?;
+            info!("Registered {} pools for DEX: {}", dex_config.pools.len(), dex_config.id);
+        }
+        
+        info!("Successfully registered {} DEXes with total {} pools", 
+              dex_configs.iter().filter(|d| d.enabled).count(),
+              dex_configs.iter().map(|d| d.pools.len()).sum::<usize>());
+        
+        Ok(())
+    }
+
+    fn create_dex_state(dex_config: &DexConfig) -> Result<Box<dyn DexState>> {
+        match dex_config.id {
+            DexId::Cetus => Ok(Box::new(CetusDexState::from_config(dex_config))),
+            _ => Err(BotError::Config(format!("Unknown DEX ID: {}", dex_config.id))),
+        }
+    }
+}
+
+impl Default for DexManagerBuilder {
     fn default() -> Self {
         Self::new()
     }

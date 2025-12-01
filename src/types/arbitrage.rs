@@ -1,7 +1,9 @@
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use crate::types::{BotError, DexId, Network, PoolId, Result, Timestamp, TokenInfo, TokenPair, now};
+use crate::types::{BotError, DexId, Network, Result, Timestamp, TokenInfo, TokenPair, now};
+use crate::types::pool_state::PoolId;
+
 
 /// A single hop in an arbitrage path
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -200,8 +202,9 @@ impl ArbitrageOpportunity {
 #[cfg(test)]
 mod tests {
     use rust_decimal::Decimal;
+    use sui_sdk::types::base_types::ObjectID;
 
-    use crate::types::{DEX_SWAP_FEE_RATE, DexId, MIN_PROFIT_PERCENT, Network, TokenInfo, TokenPair, now};
+    use crate::types::{DEX_SWAP_FEE_RATE, DexId, MIN_PROFIT_PERCENT, Network, SuiAddress, TokenInfo, TokenPair, now};
 
     use super::*;
     
@@ -220,7 +223,7 @@ mod tests {
             hops: vec![
                 ArbitrageHop {
                     dex_id: DexId::Cetus,
-                    pool_id: "pool1".into(),
+                    pool_id: PoolId::Sui(SuiAddress::random()),
                     pair: TokenPair::new(sui.clone(), usdc.clone()),
                     sell_base: false, // Buy SUI with USDC
                     token_in: usdc.clone(),
@@ -233,7 +236,7 @@ mod tests {
                 },
                 ArbitrageHop {
                     dex_id: DexId::Cetus,
-                    pool_id: "pool2".into(),
+                    pool_id: PoolId::Sui(SuiAddress::random()),
                     pair: TokenPair::new(btc.clone(), sui.clone()),
                     sell_base: false, // Buy BTC with SUI
                     token_in: sui.clone(),
@@ -246,7 +249,7 @@ mod tests {
                 },
                 ArbitrageHop {
                     dex_id: DexId::Cetus,
-                    pool_id: "pool3".into(),
+                    pool_id: PoolId::Sui(SuiAddress::random()),
                     pair: TokenPair::new(btc.clone(), usdc.clone()),
                     sell_base: true, // Sell BTC for USDC
                     token_in: btc.clone(),

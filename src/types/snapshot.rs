@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
-use crate::types::{DexId, PoolId, PoolState, Price, Timestamp, TokenInfo, TokenPair, now};
+use crate::types::{DexId, pool_state::{ PoolId, PoolState}, Price, Timestamp, TokenInfo, TokenPair, now};
 
 /// Atomic snapshot of all DEX states for consistent arbitrage calculations
 #[derive(Debug, Clone, Serialize, Deserialize)]

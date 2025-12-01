@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use crate::types::{DexId, PoolId, Price, Timestamp, TokenPair, now};
+use crate::types::{DexId, Price, Timestamp, TokenPair, now, pool_state::PoolId};
 
 /// 0.3%
 pub const DEX_SWAP_FEE_RATE: Decimal = Decimal::from_parts(3, 0, 0, false, 3);
@@ -168,7 +168,7 @@ impl SwapEvent {
     pub fn new() -> Self {
         Self {
             dex_id: DexId::Cetus,
-            pool_id: PoolId::default(),
+            pool_id: PoolId::Sui(todo!()),
             amount_in: 0,
             amount_out: 0,
             base_to_quote: true,

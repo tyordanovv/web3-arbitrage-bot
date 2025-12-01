@@ -1,0 +1,506 @@
+[network]
+network = "SuiMainnet"
+rpc_url = "https://fullnode.mainnet.sui.io:443"
+ws_url = "wss://fullnode.mainnet.sui.io:443"
+
+[[network.dexes]]
+id = "Cetus"
+package_id = "0x686e66a7a993b58e3e5c0f633c0541d1a67b8b81c6728bfc53b317c355d4d2e0"
+event_type = "SwapEvent"
+enabled = true
+[[network.dexes.pools]]
+address = "0x0254747f5ca059a1972cd7f6016485d51392a3fde608107b93bbaebea550f703"
+token_a = { symbol = "NAVX", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+
+[[network.dexes.pools]]
+address = "0x02629acec0cc5dc28209a4ea56ee44369016e903268b800e0b08314fcadbaf0f"
+token_a = { symbol = "USDB", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+
+[[network.dexes.pools]]
+address = "0x040dc6a93bd4f26ea9507c70f19eb1a060fd5cb9c3718db372f4ae711ffbbb29"
+token_a = { symbol = "BLUE", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0x075a472bdbb478df8d6a8ed51128712d3c7db67667cda94028865f129315ae28"
+token_a = { symbol = "JWLSUI", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x0e3452726371a7e93daa67afb850524f032c04e084df9485a87b7a2f72370b5e"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "WBNB", decimals = 8 }
+
+[[network.dexes.pools]]
+address = "0x0fb4ad0e4c2c2b0a45d3f7bc5585cc9cea8486a63e4ef5cb768ddd9414fbb97a"
+token_a = { symbol = "wBTC", decimals = 8 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0x0fea99ed9c65068638963a81587c3b8cafb71dc38c545319f008f7e9feb2b5f8"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "AUSD", decimals = 6 }
+
+
+[[network.dexes.pools]]
+address = "0x127b7cf262607a0bc6e1035bed13883d342b0a0c04ce60fc51b5ffbdd03a6983"
+token_a = { symbol = "Suiman", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x1341467c5aca847aff459e07d6a777a6fbf7aa7b71ffd66cc2f4bdfda162add4"
+token_a = { symbol = "SCA", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0x1de5cc16141c21923bfca33db9bb6c604de5760e4498e75ecdfcf80d62fb5818"
+token_a = { symbol = "S", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x1efc96c99c9d91ac0f54f0ca78d2d9a6ba11377d29354c0a192c86f0495ddec7"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "wUSDC", decimals = 6 }
+
+
+[[network.dexes.pools]]
+address = "0x20739112ab4d916d05639f13765d952795d53b965d206dfaed92fff7729e29af"
+token_a = { symbol = "SUIP", decimals = 9 }
+token_b = { symbol = "wUSDC", decimals = 6 }
+
+[[network.dexes.pools]]
+address = "0x25af557e5b608047c25b8fea6a15037bab0f75fe4a1235e48f63ca054ed2a0c6"
+token_a = { symbol = "STASH", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0x29333c096043846d42356e250647f113a7a99d0470bcd584f98e9edeab69100e"
+token_a = { symbol = "BLUB", decimals = 2 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x2c2bbe5623c66e9ddf39185d3ab5528493c904b89c415df991aeed73c2427aa9"
+token_a = { symbol = "SUITRUMP", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x2d79ad383127b41352030895b5c5e5228b54b2e26c9caddb71d04b928c6a4b33"
+token_a = { symbol = "stBTC", decimals = 8 }
+token_b = { symbol = "WBTC", decimals = 8 }
+
+[[network.dexes.pools]]
+address = "0x2e041f3fd93646dcc877f783c1f2b7fa62d30271bdef1f21ef002cebf857bded"
+token_a = { symbol = "CETUS", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x2f47d887c4ca1640c48946676dc3ccb40025cdb0aa52f21d6b043568a7c39ffe"
+token_a = { symbol = "MEMEFI", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x2f63cf847e12234f62a41a9526cd6ad6a8dea9d59f968be5c5c671284fd17534"
+token_a = { symbol = "JWLCETUS", decimals = 9 }
+token_b = { symbol = "CETUS", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x2fc6ee9183d0f1ca0d2dded02c416be6f4671bb82db55c26ce12b536812a4b8e"
+token_a = { symbol = "LBTC", decimals = 8 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x313b7c579b95e8021bd2ab1d071ec18615c2f3e2f8da1f9f9e0f6d676b8bea66"
+token_a = { symbol = "haWAL", decimals = 9 }
+token_b = { symbol = "WAL", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x3353c6ae880e383a7136b444d0af23eda0ca5ebc0d3a6dc48947f5870c5565ff"
+token_a = { symbol = "Sonic", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x3487e99bda85bd17360e2c32af208df69551e0673f920e8906404c32e9a47fa0"
+token_a = { symbol = "DAM", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0x3a33be7244f166c5426872d66fbfcbacaae5be229444b5bcc707de6d7656233d"
+token_a = { symbol = "enzoBTC", decimals = 8 }
+token_b = { symbol = "xBTC", decimals = 8 }
+
+[[network.dexes.pools]]
+address = "0x3b13ac70030d587624e407bbe791160b459c48f1049e04269eb8ee731f5442b4"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "CETUS", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x3d72450bd834bd243dc9f09f5dd2fcb00e4405fd43f753214a1d557f2c3982b8"
+token_a = { symbol = "meow", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x3ec8401520022aac67935188eb1f82c13cbbc949ab04692e5b62445d89b61c9f"
+token_a = { symbol = "NAVX", decimals = 9 }
+token_b = { symbol = "CETUS", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x3f77391f6b33ca2967430490c68dab38596608d05fc19d1ac9c3797595a8fddb"
+token_a = { symbol = "TAKE", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x40a372f9ee1989d76ceb8e50941b04468f8551d091fb8a5d7211522e42e60aaf"
+token_a = { symbol = "BLUB", decimals = 2 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x43d4c9adc1d669ef85d557cf1d430f311dc4eb043a8e7b78e972c1f96ec2cd60"
+token_a = { symbol = "FDUSD", decimals = 6 }
+token_b = { symbol = "USDC", decimals = 6 }
+
+[[network.dexes.pools]]
+address = "0x488411c4bc8646aaa865b5e778392d1498ba47dfdc625b6ffc70a68f52d9ff20"
+token_a = { symbol = "TARDI", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x4af78a3e9e2d6cabca5da79c1e6bff4899566a421321fc3b5a619664017a60d6"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "WSOL", decimals = 8 }
+
+[[network.dexes.pools]]
+address = "0x4c50ba9d1e60d229800293a4222851c9c3f797aa5ba8a8d32cc67ec7e79fec60"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "BUCK", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x4f665396e49a6a9f233580eed6dfdeff9b5e1054094f27dbb2bd568bdc4e75d5"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "WAL", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x51e883ba7c0b566a26cbc8a94cd33eb0abd418a77cc1e60ad22fd9b1f29cd2ab"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x5b0b24c27ccf6d0e98f3a8704d2e577de83fa574d3a9060eb8945eeb82b3e2df"
+token_a = { symbol = "WETH", decimals = 8 }
+token_b = { symbol = "wUSDC", decimals = 6 }
+
+[[network.dexes.pools]]
+address = "0x5c5e87f0adf458b77cc48e17a7b81a0e7bc2e9c6c609b67c0851ef059a866f3a"
+token_a = { symbol = "sSUI", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x5cf7e2ec9311d9057e43477a29bd457c51beeb1ddcd151c385a295dbb3c0fb18"
+token_a = { symbol = "ALKIMI", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x68d16416770f9b73b0b1b45e118f6ea3a2910f548f942fe335824fd515cdff08"
+token_a = { symbol = "BUT", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x6aa304c66d16979e9b527460ff5a470cfbc08e1ecd388c2ac977fd061e96da88"
+token_a = { symbol = "FLAMINGO", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x6bd72983b0b5a77774af8c77567bb593b418ae3cd750a5926814fcd236409aaa"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "wUSDT", decimals = 6 }
+
+[[network.dexes.pools]]
+address = "0x6c545e78638c8c1db7a48b282bb8ca79da107993fcb185f75cedc1f5adb2f535"
+token_a = { symbol = "vSUI", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x6cd91ac6eab109dbefbad9693760f929d963c01b9ddba21d3584ca9de36402b5"
+token_a = { symbol = "DAOS", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x6dc4048ae8eb73f24b6bc2381c0e6de9e7b06b01d96cee1eac2decd2400ffa46"
+token_a = { symbol = "USDB", decimals = 6 }
+token_b = { symbol = "USDC", decimals = 6 }
+
+[[network.dexes.pools]]
+address = "0x7079378d20cb521acc9a77c0d69da0e4b65cc07b2a1666868c95444939c3929e"
+token_a = { symbol = "ETH", decimals = 8 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x711f5d37e3b09b026b182d9e0973d05e9a837d11066ff48f4a55a426d8913359"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "HAEDAL", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x7249180ebceeaa0700c4f4851507e8c357930bb06f3dba041b8816c39d88e625"
+token_a = { symbol = "SLOVE", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x72f5c6eef73d77de271886219a2543e7c29a33de19a6c69c5cf1899f729c3f17"
+token_a = { symbol = "WAL", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x75b2698fc23040ab88d2018ccac4365aa1fab79f1f0c623882b68ce9b1403c50"
+token_a = { symbol = "wBTC", decimals = 8 }
+token_b = { symbol = "WBTC", decimals = 8 }
+
+[[network.dexes.pools]]
+address = "0x763f63cbada3a932c46972c6c6dcf1abd8a9a73331908a1d7ef24c2232d85520"
+token_a = { symbol = "NS", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x7852612f5bf73613021f17353985fc186b3b224139c6a2576239132ba5a33b66"
+token_a = { symbol = "SUAI", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x7a0abae43a864801894c29d72c387ce7681ba752dd331492b32c3c5e1672c973"
+token_a = { symbol = "USDB", decimals = 6 }
+token_b = { symbol = "BUCK", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x7d44018fbc32f456b6d0122206041a2cc159bdde32911b4be94a4e5840890764"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "haSUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x7d76bf3f63657fd4f4abd29a10439880f82c5aecacae1d0320c81588df133723"
+token_a = { symbol = "wBTC", decimals = 8 }
+token_b = { symbol = "YBTC.B", decimals = 8 }
+
+[[network.dexes.pools]]
+address = "0x7e610a7466f0b7dbf8cda4ba0fa0a652b87c53a1d1d0578ce808bc2cfd139fb6"
+token_a = { symbol = "BUCK", decimals = 9 }
+token_b = { symbol = "vSUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x84fc1515fd3d2395b2d67b301dc2b60040e31af7e295f8731c84bd528733252f"
+token_a = { symbol = "suiUSDT", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0x871cbd82b0f2301598930b14fb53e5a199f3d17de109a3554289c0248f48bd85"
+token_a = { symbol = "SHR0", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0x871d8a227114f375170f149f7e9d45be822dd003eba225e83c05ac80828596bc"
+token_a = { symbol = "haSUI", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+
+
+[[network.dexes.pools]]
+address = "0x960d673274597d9ac471044d4a94740dacd9e5039217397ea44cd9f994ff55de"
+token_a = { symbol = "STD", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0x9661cca01a5b9b3536883568fa967a2943e237de11a97976795f5adb293892e9"
+token_a = { symbol = "SCA", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0x9c3a06e2ca93d0a3b9bd35e6de2466f8382bc2a643c875a0aac9eb7db411ce48"
+token_a = { symbol = "CHIRP", decimals = 10 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0x9e59de50d9e5979fc03ac5bcacdb581c823dbd27d63a036131e17b391f2fac88"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "ETH", decimals = 8 }
+
+
+
+[[network.dexes.pools]]
+address = "0xa1aed8a0df6c9c65e3bdda376a27762cc3ed66ef5f2bac4fb3604e01050bef3f"
+token_a = { symbol = "WEWE", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0xa288810f820498f7c2bca41cfadea3e99bd152b3dbeb2c282bb4b9c909f71c6d"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "DMC", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0xa2f4e24dc234cf024bae1bd5b1275ab5bdc7c28dd1ec84dd98c2d012bbd315f0"
+token_a = { symbol = "DEEP", decimals = 6 }
+token_b = { symbol = "USDC", decimals = 6 }
+
+
+
+[[network.dexes.pools]]
+address = "0xa467d2dee561bca8e7b3f5f1622f0fa1cb672befae69a0d1b6dced941c858c4e"
+token_a = { symbol = "TYPUS", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0xa528b26eae41bcfca488a9feaa3dca614b2a1d9b9b5c78c256918ced051d4c50"
+token_a = { symbol = "afSUI", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0xa6275fa7e6b2bf96b841db41924d87d43f90e6992ce3593dca8180d99f20df58"
+token_a = { symbol = "BUCK", decimals = 9 }
+token_b = { symbol = "NAVX", decimals = 9 }
+[[network.dexes.pools]]
+address = "0xa72776082624b0f5da55e385107fc0176114bfea5b281b880acae505a9bd1f1a"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "wBTC", decimals = 8 }
+
+[[network.dexes.pools]]
+address = "0xa8593858a7dfb15abd4c995ed7f2ab2ffc4f18a6d953e982361bd0c7fa595463"
+token_a = { symbol = "SCUBA", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0xaa020ad81e1621d98d4fb82c4acb80dc064722f24ef828ab633bef50fc28268b"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "haSUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0xb4b2b5b1ebbe992827e686bbd2ebca51711fa6b5d8e6013422c33d490d328ba0"
+token_a = { symbol = "PYTH", decimals = 6 }
+token_b = { symbol = "CETUS", decimals = 9 }
+[[network.dexes.pools]]
+address = "0xb785e6eed355c1f8367c06d2b0cb9303ab167f8359a129bb003891ee54c6fce0"
+token_a = { symbol = "HIPPO", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0xb8a67c149fd1bc7f9aca1541c61e51ba13bdded64c273c278e50850ae3bff073"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "suiUSDT", decimals = 6 }
+
+[[network.dexes.pools]]
+address = "0xb8d7d9e66a60c239e7a60110efcf8de6c705580ed924d0dde141f4a0e2c90105"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+
+
+
+[[network.dexes.pools]]
+address = "0xba201202145373c9da4a9f1c8c10eff1e8f7aebeb9d668500726c462c49d6c0b"
+token_a = { symbol = "DEEP", decimals = 6 }
+token_b = { symbol = "WAL", decimals = 9 }
+[[network.dexes.pools]]
+address = "0xbcf18ddb425dfc3207d57b83e8d105ef11b502a1b6072a8026e3716ac535b035"
+token_a = { symbol = "SUIA", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0xc23e7e8a74f0b18af4dfb7c3280e2a56916ec4d41e14416f85184a8aab6b7789"
+token_a = { symbol = "IKA", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+
+[[network.dexes.pools]]
+address = "0xc5272febec491a582ae5ae35c95c5cfc1a4455a3b5ae1df6c03d9711eee790ec"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "ATTN", decimals = 6 }
+[[network.dexes.pools]]
+address = "0xc8d7a1503dc2f9f5b05449a87d8733593e2f0f3e7bffd90541252782e4d2ca20"
+token_a = { symbol = "wUSDT", decimals = 6 }
+token_b = { symbol = "wUSDC", decimals = 6 }
+
+
+[[network.dexes.pools]]
+address = "0xc905c9263609d6ea700ff6267978107336beab3df377d58a1c53f6e25b7630ee"
+token_a = { symbol = "Uni", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0xcc4f0a4f6b5ce21a9a6c5261a2264b11eab8da463f5e00d53c427b348536f804"
+token_a = { symbol = "DEEP", decimals = 6 }
+token_b = { symbol = "BUCK", decimals = 9 }
+[[network.dexes.pools]]
+address = "0xcf994611fd4c48e277ce3ffd4d4364c914af2c3cbb05f7bf6facd371de688630"
+token_a = { symbol = "wUSDC", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+
+[[network.dexes.pools]]
+address = "0xd6918afa64d432b84b48088d165b0dda0b7459463a7d66365f7ff890cae22d2d"
+token_a = { symbol = "LOFI", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0xd978d331772a5b90d5a4781e1232d18afd12019d0c35db79e3674beeda8f9126"
+token_a = { symbol = "DEEP", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0xda7347c3192a27ddac32e659c9d9cbed6f8c9d1344e605c71c8886d7b787d720"
+token_a = { symbol = "ALPHA", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0xdcd762ad374686fa890fc4f3b9bbfe2a244e713d7bffbfbd1b9221cb290da2ed"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "USDY", decimals = 6 }
+
+
+[[network.dexes.pools]]
+address = "0xde265ef8645c680c71b33805de77ce5261a20c58397d83b3915bdbb3a7209d7e"
+token_a = { symbol = "AXOL", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0xe01243f37f712ef87e556afb9b1d03d0fae13f96d324ec912daffc339dfdcbd2"
+token_a = { symbol = "DEEP", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+
+
+[[network.dexes.pools]]
+address = "0xe0c526aa27d1729931d0051a318d795ad0299998898e4287d9da1bf095b49658"
+token_a = { symbol = "WBTC", decimals = 8 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+
+[[network.dexes.pools]]
+address = "0xe4ff047ec4e6cb5dec195c4c71bc435223bf0273f1473ab6a10cf6ad132bdda1"
+token_a = { symbol = "LOOPY", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0xe79efa7b95f6920dfc46ab38d0fae7419113d19e40e84b41abf8ddf3fd287ae1"
+token_a = { symbol = "Toilet", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0xe9053840c6b58ac21e045d1bb266ce892f96c9aec6c3761840c9704bd5c51764"
+token_a = { symbol = "wBTC", decimals = 8 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0xefb30c2780bb10ffd4cf860049248dcc4b204927ca63c4c2e4d0ae5666a280d5"
+token_a = { symbol = "DEEP", decimals = 6 }
+token_b = { symbol = "USDC", decimals = 6 }
+[[network.dexes.pools]]
+address = "0xf4238fa592c9ed7f148fd091cb2c4147cb15ad81b797115ce42971923ebf6e4c"
+token_a = { symbol = "WAL", decimals = 9 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0xf45b01f23e9951e37733b76c8cc7d22dcd23141aa246a86e17595a7aca610e1d"
+token_a = { symbol = "WSOL", decimals = 8 }
+token_b = { symbol = "SUI", decimals = 9 }
+[[network.dexes.pools]]
+address = "0xf7bc4e73819a9e90d87b6eb40436dae7b620b16574c33e8f5d439ccc99201da8"
+token_a = { symbol = "haSUI", decimals = 9 }
+token_b = { symbol = "HAEDAL", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0xf81d070f24bd2518a28193fc081774654cd8ad145559fa1fa0d7471cb3eecb27"
+token_a = { symbol = "USDC", decimals = 6 }
+token_b = { symbol = "WBTC", decimals = 8 }
+
+[[network.dexes.pools]]
+address = "0xfc6a11998f1acf1dd55acb58acd7716564049cfd5fd95e754b0b4fe9444f4c9d"
+token_a = { symbol = "FUD", decimals = 5 }
+token_b = { symbol = "SUI", decimals = 9 }
+
+[[network.dexes.pools]]
+address = "0xfd444d112caeb75011316785548093781b3b9032ceccb5f4817103bc5f1b9f55"
+token_a = { symbol = "SEND", decimals = 6 }
+token_b = { symbol = "SUI", decimals = 9 }

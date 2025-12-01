@@ -1,6 +1,6 @@
 use tracing::{ debug, error, info, warn };
 
-use crate::{arbitrage::{detector::ArbitrageDetector, validator::OpportunityValidator}, event::processor::EventProcessor, execution::executor::TradeExecutor, sync::synchronizer::SyncOrchestrator, types::{ArbitrageOpportunity, ExecutionResult, Result}};
+use crate::{arbitrage::{detector::ArbitrageDetector, validator::OpportunityValidator}, event::processor::EventProcessor, execution::executor::TradeExecutor, sync::synchronizer::{SyncOrchestrator, SyncType}, types::{ArbitrageOpportunity, ExecutionResult, Result}};
 use std::{sync::Arc, time::Duration};
 
 pub struct ArbitrageEngine {
@@ -93,7 +93,7 @@ impl ArbitrageEngine {
                 }
                 _ = sync_interval.tick() => {
                     info!("Running periodic state synchronization...");
-                    if let Err(e) = self.sync_orchestrator.sync_all_pools().await {
+                    if let Err(e) = self.sync_orchestrator.sync_pools(SyncType::All).await {
                         error!("Periodic sync failed: {}", e);
                     } else {
                         self.last_sync_time = std::time::Instant::now();

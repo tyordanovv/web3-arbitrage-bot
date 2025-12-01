@@ -12,16 +12,18 @@ async fn main() -> Result<()> {
     let config = Config::load()?;
     config.validate()?;
     
-    let dex_manager = DexManager::with_config(
-        config.sync_config().max_pools_per_dex,
-        config.sync_config().state_ttl(),
-    );    let dex_manager = Arc::new(RwLock::new(dex_manager));
+    let dex_manager = Arc::new(RwLock::new(DexManagerBuilder::new()
+        .with_max_pools_per_dex(config.sync.max_pools_per_dex)
+        .with_state_ttl(config.sync.state_ttl())
+        .with_dex_configs(config.network.dexes)
+        .build()?)
+    );
     
     let orchestrator = Arc::new(SyncOrchestratorBuilder::new()
         .with_dex_manager(dex_manager.clone())
         .with_rpc_endpoint(config.network_config().rpc_url.clone())
         .with_config(config.sync_config().clone())
-        .build()?
+        .build().await?
     );
     
     info!("Performing initial state synchronization...");
