@@ -37,13 +37,12 @@ impl SyncOrchestrator {
     }
 
     pub async fn initialize(&self) -> Result<()> {
-        info!("initialize 1");
         self.sync_pools(SyncType::Initial).await?;
         Ok(())
     }
 
     pub async fn sync_pools(&self, sync_type: SyncType) -> Result<usize> {
-        info!("sync_pools 2");
+        
         let pools_by_network_dex = match sync_type {
             SyncType::Initial | SyncType::All => {
                 self.state_manager.get_monitored_pools_grouped().await

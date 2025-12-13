@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use arbitrage_bot::{arbitrage::{arbitrage_engine::{ArbitrageEngine, ArbitrageEngineBuilder}, calculator::{ArbitrageCalculator, DefaultArbitrageCalculator}, detector::{ArbitrageDetector, DefaultArbitrageDetector}, validator::{DefaultOpportunityValidator, OpportunityValidator}}, dex::manager::{DexManager, DexManagerBuilder}, event::processor::{DefaultEventProcessor, EventProcessor}, execution::executor::{DefaultTradeExecutor, TradeExecutor}, sync::synchronizer::SyncOrchestratorBuilder, types::Result, utils::{config::Config, logger::init}};
+use arbitrage_bot::{arbitrage::{arbitrage_engine::{ArbitrageEngine, ArbitrageEngineBuilder}, calculator::{ArbitrageCalculator, DefaultArbitrageCalculator}, detector::{ArbitrageDetector, DefaultArbitrageDetector}, validator::{DefaultOpportunityValidator, OpportunityValidator}}, dex::manager::{DexManager, DexManagerBuilder}, event::processor::{DefaultEventProcessor, EventProcessor}, execution::executor::{DefaultTradeExecutor, TradeExecutor}, sync::{state::StateManager, synchronizer::SyncOrchestratorBuilder}, types::Result, utils::{config::Config, logger::init}};
 use tokio::sync::RwLock;
 use tracing::{info, error};
 
@@ -19,13 +19,17 @@ async fn main() -> Result<()> {
         .build()?)
     );
     
+    // Create StateManager with integrated StateReader
+    let state_manager = StateManager::new(dex_manager.clone());
+    let state_reader = state_manager.get_reader();
+
     let orchestrator = Arc::new(SyncOrchestratorBuilder::new()
         .with_dex_manager(dex_manager.clone())
         .with_rpc_endpoint(config.network_config().rpc_url.clone())
         .with_config(config.sync_config().clone())
         .build().await?
     );
-    
+
     info!("Performing initial state synchronization...");
     if let Err(e) = orchestrator.initialize().await {
         error!("Initial synchronization failed: {}", e);
@@ -33,26 +37,41 @@ async fn main() -> Result<()> {
     }
     info!("Initial synchronization completed successfully");
 
+    // Build initial snapshot for lock-free reads
+    info!("Building initial state snapshot...");
+    if let Err(e) = state_manager.update_multiple_pools(vec![]).await {
+        error!("Failed to build initial snapshot: {}", e);
+    } else {
+        let stats = state_reader.get_stats();
+        info!(
+            pool_count = stats.pool_count,
+            dex_count = stats.dex_count,
+            "Initial snapshot built successfully"
+        );
+    }
+
     let event_processor = Box::new(DefaultEventProcessor::new(
         dex_manager.clone(),
         config.network_config().clone(),
     )) as Box<dyn EventProcessor>;
-    
+
     let calculator = Box::new(DefaultArbitrageCalculator::new(
         config.arbitrage_config().clone(),
     )) as Box<dyn ArbitrageCalculator>;
-    
+
+    // Detector now uses StateReader for lock-free reads
     let detector = Box::new(DefaultArbitrageDetector::new(
-        dex_manager.clone(),
+        state_reader.clone(),
         calculator,
     )) as Box<dyn ArbitrageDetector>;
     
     let executor = Box::new(DefaultTradeExecutor::new(
         config.execution_config().clone(),
     )) as Box<dyn TradeExecutor>;
-    
+
+    // Validator also uses StateReader for lock-free reads
     let validator = Box::new(DefaultOpportunityValidator::new(
-        dex_manager.clone(),
+        state_reader.clone(),
         config.validation_config().clone(),
     )) as Box<dyn OpportunityValidator>;
     

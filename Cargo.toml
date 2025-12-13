@@ -31,6 +31,7 @@ thiserror = "2.0.17"
 chrono = "0.4"
 rust_decimal = "1.33"
 rust_decimal_macros = "1.33"
+arc-swap = "1.7"
 
 # Logging
 tracing = "0.1"

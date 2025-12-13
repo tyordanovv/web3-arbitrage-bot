@@ -152,14 +152,40 @@ impl DexManager {
     
     /// Get all pool states from all DEXs
     pub async fn get_all_pools(&self) -> Vec<PoolState> {
+        let fetch_start = std::time::Instant::now();
         let mut all_pools = Vec::new();
-        
-        for dex in self.dexes.values() {
-            if let Ok(pools) = dex.get_all_pool_states().await {
-                all_pools.extend(pools);
+
+        for (dex_id, dex) in self.dexes.iter() {
+            let dex_fetch_start = std::time::Instant::now();
+            match dex.get_all_pool_states().await {
+                Ok(pools) => {
+                    let pool_count = pools.len();
+                    all_pools.extend(pools);
+                    debug!(
+                        dex_id = %dex_id,
+                        pool_count = pool_count,
+                        fetch_time_us = dex_fetch_start.elapsed().as_micros(),
+                        "Fetched pools from DEX"
+                    );
+                }
+                Err(e) => {
+                    error!(
+                        dex_id = %dex_id,
+                        error = %e,
+                        "Failed to fetch pools from DEX"
+                    );
+                }
             }
         }
-        
+
+        let total_time = fetch_start.elapsed();
+        debug!(
+            total_pools = all_pools.len(),
+            dex_count = self.dexes.len(),
+            total_fetch_time_us = total_time.as_micros(),
+            "Fetched all pools from all DEXs"
+        );
+
         all_pools
     }
     
@@ -172,32 +198,73 @@ impl DexManager {
     }
     
     pub async fn update_pool_state(&mut self, pool_state: PoolState) -> Result<()> {
+        let update_start = std::time::Instant::now();
+        let pool_id = pool_state.pool_id.clone();
+
+        // Lookup DEX for this pool
+        let lookup_start = std::time::Instant::now();
         let dex_id = self.get_monitored_dex_by_pool_id(&pool_state.pool_id)
             .cloned()
             .ok_or_else(|| BotError::NotFound(format!("Pool {} is not monitored", &pool_state.pool_id)))?;
-        
+        let lookup_time = lookup_start.elapsed();
+
+        // Get mutable DEX reference
         let dex = self.dexes.get_mut(&dex_id)
             .ok_or_else(|| BotError::NotFound(format!("DEX {} not found", dex_id)))?;
-        
+
+        // Update pool in DEX
+        let dex_update_start = std::time::Instant::now();
         dex.update_pool_state(pool_state).await?;
+        let dex_update_time = dex_update_start.elapsed();
+
         self.last_sync_time = now();
-        
+
+        let total_time = update_start.elapsed();
+
+        debug!(
+            pool_id = ?pool_id,
+            dex_id = %dex_id,
+            lookup_time_ns = lookup_time.as_nanos(),
+            dex_update_time_us = dex_update_time.as_micros(),
+            total_time_us = total_time.as_micros(),
+            "DexManager: Pool state updated"
+        );
+
         Ok(())
     }
     
     pub async fn update_pool_states(&mut self, pool_states: Vec<PoolState>) -> Result<usize> {
+        let batch_start = std::time::Instant::now();
+        let total_pools = pool_states.len();
+
+        debug!(total_pools = total_pools, "DexManager: Starting batch pool update");
+
         let mut success_count = 0;
-        
+        let mut failure_count = 0;
+
         for pool_state in pool_states {
             if self.update_pool_state(pool_state).await.is_ok() {
                 success_count += 1;
+            } else {
+                failure_count += 1;
             }
         }
-        
+
         if success_count > 0 {
             self.last_sync_time = now();
         }
-        
+
+        let total_time = batch_start.elapsed();
+
+        info!(
+            total_pools = total_pools,
+            success_count = success_count,
+            failure_count = failure_count,
+            total_time_us = total_time.as_micros(),
+            avg_time_per_pool_us = if total_pools > 0 { total_time.as_micros() / total_pools as u128 } else { 0 },
+            "DexManager: Batch pool update completed"
+        );
+
         Ok(success_count)
     }
     

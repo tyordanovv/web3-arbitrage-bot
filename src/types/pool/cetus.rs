@@ -1,4 +1,5 @@
 use sui_sdk::rpc_types::SuiObjectData;
+use tracing::info;
 use crate::types::{BotError, ChainAddress, DexId, Result, SuiAddress, Timestamp, TokenInfo, extractor::FieldExtractor, now, pool_parser::PoolParser, pool_state::{PoolId, PoolState}};
 
 pub struct CetusPoolParser;
@@ -33,7 +34,7 @@ impl PoolParser for CetusPoolParser {
         
         let (token_a, token_b) = Self::extract_token_types(&type_str)?;
 
-        println!("pool id: {}, reserve_a: {}, reserve_b: {}, liquidity: {}, fee_rate: {}", pool_id, reserve_a, reserve_b, liquidity, fee_rate);
+        info!("pool id: {}, reserve_a: {}, reserve_b: {}, liquidity: {}, fee_rate: {}", pool_id, reserve_a, reserve_b, liquidity, fee_rate);
         
         Ok(PoolState {
             dex_id: DexId::Cetus,

@@ -28,11 +28,9 @@ impl PoolParserRegistry {
     
     /// Parse a SuiObjectData using the first compatible parser
     pub fn parse(&self, sui_object: &SuiObjectData, dex_id: &DexId) -> Result<PoolState> {
-        println!("parse dex_id: {}", dex_id);
         // First try to find parser by DEX ID
         for parser in &self.parsers {
             if parser.dex_id() == *dex_id {
-                println!("dex_id: {}", dex_id);
                 return parser.parse(sui_object);
             }
         }
