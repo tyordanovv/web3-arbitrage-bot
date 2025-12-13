@@ -1,33 +1,62 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use sui_sdk::types::base_types::ObjectID;
 use tracing::{debug, info, warn, error};
 
-use crate::{client::sui_rpc::SuiRpcClient, types::{BotError, ChainAddress, DexId, Network, Result, cetus::CetusPoolParser, pool_parser::PoolParserRegistry, pool_state::{ PoolId, PoolState}, turbos::TurbosPoolParser}, utils::config::SyncConfig};
+use crate::{client::{client::RpcClientEnum, sui_rpc::SuiRpcClient}, types::{BotError, ChainAddress, DexId, Network, Result, cetus::CetusPoolParser, pool_parser::PoolParserRegistry, pool_state::{ PoolId, PoolState}, turbos::TurbosPoolParser}, utils::config::SyncConfig};
 
 pub struct PoolStateFetcher {
-    sui_rpc_client: Arc<SuiRpcClient>,
+    rpc_clients: HashMap<Network, Arc<RpcClientEnum>>,
     config: SyncConfig,
     parser_registry: PoolParserRegistry,
 }
 
 impl PoolStateFetcher {
-    pub fn new(sui_rpc_client: Arc<SuiRpcClient>, config: SyncConfig) -> Self {
+    pub async fn new(config: SyncConfig) -> Result<Self> {
+        let mut rpc_clients = HashMap::new();
+        let network = Network::SuiMainnet;
+
+        match SuiRpcClient::new(network.clone()).await {
+            Ok(client) => {
+                rpc_clients.insert(network.clone(), Arc::new(RpcClientEnum::Sui(client)));
+                info!("Initialized RPC client for network: {:?}", network);
+            }
+            Err(e) => {
+                warn!("Failed to initialize RPC client for network {:?}: {}", network, e);
+            }
+        }
+
+        if rpc_clients.is_empty() {
+            return Err(BotError::Sync("No RPC clients initialized".to_string()));
+        }
+
         let parser_registry = PoolParserRegistry::new()
             .register(CetusPoolParser::new())
             .register(TurbosPoolParser::new());
-        
-        Self {
-            sui_rpc_client,
+
+        Ok(Self {
+            rpc_clients,
             config,
             parser_registry,
-        }
+        })
+    }
+
+    pub fn with_rpc_client(mut self, network: Network, client: Arc<RpcClientEnum>) -> Self {
+        self.rpc_clients.insert(network, client);
+        self
+    }
+
+    pub fn get_rpc_client(&self, network: &Network) -> Option<&Arc<RpcClientEnum>> {
+        self.rpc_clients.get(network)
     }
 
     pub async fn fetch_batch(&self, network: &Network, dex_id: &DexId, pool_ids: &[PoolId]) -> Result<Vec<PoolState>> {
         info!("Fetching batch of {} pools for network {:?}", pool_ids.len(), network);
-        
+
+        let rpc_client = self.rpc_clients.get(network)
+            .ok_or_else(|| BotError::Sync(format!("No RPC client found for network {:?}", network)))?;
+
         match network {
-            Network::SuiMainnet => self.fetch_sui_batch(dex_id, pool_ids).await,
+            Network::SuiMainnet => self.fetch_sui_batch(rpc_client, dex_id, pool_ids).await,
             _ => {
                 error!("Network {} not implemented, falling back to individual fetches", network);
                 Err(BotError::Sync(format!("Network {} not implemented, falling back to individual fetches", network)))
@@ -35,17 +64,30 @@ impl PoolStateFetcher {
         }
     }
 
-    async fn fetch_sui_batch(&self, dex_id: &DexId, pool_ids: &[PoolId]) -> Result<Vec<PoolState>> {
-        let object_ids: Vec<_> = pool_ids.iter()
+    async fn fetch_sui_batch(
+        &self,
+        rpc_client: &Arc<RpcClientEnum>,
+        dex_id: &DexId,
+        pool_ids: &[PoolId],
+    ) -> Result<Vec<PoolState>> {
+        let object_ids: Vec<_> = pool_ids
+            .iter()
             .filter_map(|pool_id| pool_id.as_sui_object_id())
             .collect();
 
-        match self.sui_rpc_client.batch_get_objects(
-            object_ids,
-            None,
-            self.config.batch_size,
-            2000
-        ).await {
+        if object_ids.is_empty() {
+            return Err(BotError::Sync("No valid Sui object IDs found".to_string()));
+        }
+
+        match rpc_client
+            .batch_get_objects(
+                object_ids,
+                Some(sui_sdk::rpc_types::SuiObjectDataOptions::full_content()),
+                self.config.batch_size,
+                2000,
+            )
+            .await
+        {
             Ok(sui_objects) => {
                 info!("Successfully batch fetched {} pools", sui_objects.len());
                 let pool_states = self.parser_registry.parse_batch(sui_objects, dex_id);
@@ -77,13 +119,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_client_creation() {
-        let result = SuiRpcClient::new().await;
+        let result = SuiRpcClient::new_default().await;
         assert!(result.is_ok(), "Failed to create SuiRpcClient: {:?}", result.err());
     }
 
     #[tokio::test]
     async fn test_batch_get_objects_with_cetus_pools() {
-        let client = SuiRpcClient::new().await.unwrap();
+        let client = SuiRpcClient::new_default().await.unwrap();
 
         let pool_ids = vec![
             ObjectID::from_str(CETUS_USDC_HASUI_POOL).unwrap(),
@@ -107,7 +149,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_empty_object_list() {
-        let client = SuiRpcClient::new().await.unwrap();
+        let client = SuiRpcClient::new_default().await.unwrap();
 
         let result = client
             .batch_get_objects(vec![], Some(SuiObjectDataOptions::default()), 10, 0)
@@ -120,7 +162,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_batching_with_multiple_pools() {
-        let client = SuiRpcClient::new().await.unwrap();
+        let client = SuiRpcClient::new_default().await.unwrap();
 
         let pool_ids = vec![
             ObjectID::from_str(CETUS_USDC_HASUI_POOL).unwrap(),
@@ -145,7 +187,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_no_delay_on_last_batch() {
-        let client = SuiRpcClient::new().await.unwrap();
+        let client = SuiRpcClient::new_default().await.unwrap();
 
         let pool_ids = vec![
             ObjectID::from_str(CETUS_USDC_HASUI_POOL).unwrap(),

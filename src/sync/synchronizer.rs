@@ -150,9 +150,8 @@ impl SyncOrchestratorBuilder {
         let config = self.config
             .ok_or_else(|| BotError::Config("SyncConfig is required".to_string()))?;
 
-        let rpc_client = Arc::new(SuiRpcClient::new().await?);
         let state_manager = Arc::new(StateManager::new(dex_manager));
-        let pool_fetcher = Arc::new(PoolStateFetcher::new(rpc_client, config.clone()));
+        let pool_fetcher = Arc::new(PoolStateFetcher::new(config.clone()).await?);
 
         Ok(SyncOrchestrator::new(state_manager, pool_fetcher, config))
     }

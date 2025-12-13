@@ -16,10 +16,6 @@ impl PoolParser for CetusPoolParser {
         DexId::Cetus
     }
     
-    fn can_parse(&self, sui_object: &SuiObjectData) -> bool {
-        FieldExtractor::has_type_suffix(sui_object, Self::POOL_TYPE_IDENTIFIER)
-    }
-    
     fn parse(&self, sui_object: &SuiObjectData) -> Result<PoolState> {
         let extractor = FieldExtractor::new(sui_object)?;
         
@@ -36,6 +32,8 @@ impl PoolParser for CetusPoolParser {
             .to_string();
         
         let (token_a, token_b) = Self::extract_token_types(&type_str)?;
+
+        println!("pool id: {}, reserve_a: {}, reserve_b: {}, liquidity: {}, fee_rate: {}", pool_id, reserve_a, reserve_b, liquidity, fee_rate);
         
         Ok(PoolState {
             dex_id: DexId::Cetus,

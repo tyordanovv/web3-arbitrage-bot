@@ -6,9 +6,6 @@ pub trait PoolParser: Send + Sync {
     /// Parse a SuiObjectData into a PoolState
     fn parse(&self, sui_object: &SuiObjectData) -> Result<PoolState>;
     
-    /// Validate if this parser can handle the given object type
-    fn can_parse(&self, sui_object: &SuiObjectData) -> bool;
-    
     /// Get the DEX ID this parser handles
     fn dex_id(&self) -> DexId;
 }
@@ -31,9 +28,11 @@ impl PoolParserRegistry {
     
     /// Parse a SuiObjectData using the first compatible parser
     pub fn parse(&self, sui_object: &SuiObjectData, dex_id: &DexId) -> Result<PoolState> {
+        println!("parse dex_id: {}", dex_id);
         // First try to find parser by DEX ID
         for parser in &self.parsers {
-            if parser.dex_id() == *dex_id && parser.can_parse(sui_object) {
+            if parser.dex_id() == *dex_id {
+                println!("dex_id: {}", dex_id);
                 return parser.parse(sui_object);
             }
         }
@@ -49,11 +48,7 @@ impl PoolParserRegistry {
                 match self.parse(obj, dex_id) {
                     Ok(pool) => Some(pool),
                     Err(e) => {
-                        tracing::warn!(
-                            "Failed to parse pool {}: {}",
-                            obj.object_id,
-                            e
-                        );
+                        tracing::warn!("Failed to parse pool {}: {}", obj.object_id, e);
                         None
                     }
                 }
@@ -99,12 +94,6 @@ mod tests {
             })
         }
         
-        fn can_parse(&self, sui_object: &SuiObjectData) -> bool {
-            sui_object.type_.as_ref()
-                .map(|t| t.to_string().contains("::pool::Pool"))
-                .unwrap_or(false)
-        }
-        
         fn dex_id(&self) -> DexId {
             DexId::Cetus
         }
@@ -115,12 +104,6 @@ mod tests {
     impl PoolParser for MockParserB {
         fn parse(&self, _sui_object: &SuiObjectData) -> Result<PoolState> {
             Err(BotError::Parse("Mock parser B always fails".to_string()))
-        }
-        
-        fn can_parse(&self, sui_object: &SuiObjectData) -> bool {
-            sui_object.type_.as_ref()
-                .map(|t| t.to_string().contains("::other::Pool"))
-                .unwrap_or(false)
         }
         
         fn dex_id(&self) -> DexId {

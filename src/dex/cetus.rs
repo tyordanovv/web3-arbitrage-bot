@@ -1,6 +1,7 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use async_trait::async_trait;
+use sui_sdk::types::base_types::ObjectID;
 use tracing::{debug, info, error};
 
 use crate::{dex::state::DexState, types::{BotError, DexId, HealthStatus, Price, PriceUpdate, RawEvent, Result, SuiAddress, SwapEvent, TokenPair, pool_state::{ PoolId, PoolState}}, utils::config::DexConfig};
@@ -15,28 +16,32 @@ pub struct CetusDexState {
 }
 
 impl CetusDexState {
-    pub fn from_config(dex_config: &DexConfig) -> Self {
+    pub fn from_config(dex_config: &DexConfig) -> Result<Self> {
         let mut init_pool_states: HashMap<PoolId, PoolState> = HashMap::new();
-        for pool in dex_config.pools {
-            init_pool_states.insert(PoolId::Sui(SuiAddress::new(pool.address)), PoolState::default());
+
+        for pool in &dex_config.pools {
+            let sui_addr = SuiAddress::from_str(&pool.address)?;
+            let pool_id = PoolId::Sui(sui_addr);
+
+            init_pool_states.insert(
+                pool_id.clone(),
+                PoolState::new(
+                    dex_config.id.clone(),
+                    pool_id,
+                    pool.token_a.clone(),
+                    pool.token_b.clone(),
+                ),
+            );
         }
-        Self {
-            dex_id: dex_config.id,
+
+        Ok(Self {
+            dex_id: dex_config.id.clone(),
             package_id: dex_config.package_id.clone(),
             event_type: dex_config.event_type.clone(),
-            pool_states: HashMap::new(),
+            pool_states: init_pool_states,
             last_update: std::time::Instant::now(),
             is_healthy: false,
-        }
-    }
-    
-    pub fn with_pools(package_id: String, event_type: String, initial_pools: Vec<PoolId>) -> Self {
-        let mut state = Self::new(package_id, event_type);
-        for pool_id in initial_pools {
-            // Initialize with default/empty pool states
-            state.pool_states.insert(pool_id, PoolState::default());
-        }
-        state
+        })
     }
 }
 
@@ -125,11 +130,5 @@ impl DexState for CetusDexState {
     
     fn get_monitored_pools(&self) -> Vec<PoolId> {
         self.pool_states.keys().cloned().collect()
-    }
-}
-
-impl Default for CetusDexState {
-    fn default() -> Self {
-        Self::new()
     }
 }

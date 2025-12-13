@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use arbitrage_bot::{arbitrage::{arbitrage_engine::{ArbitrageEngine, ArbitrageEngineBuilder}, calculator::{ArbitrageCalculator, DefaultArbitrageCalculator}, detector::{ArbitrageDetector, DefaultArbitrageDetector}, validator::{DefaultOpportunityValidator, OpportunityValidator}}, dex::manager::DexManager, event::processor::{DefaultEventProcessor, EventProcessor}, execution::executor::{DefaultTradeExecutor, TradeExecutor}, sync::synchronizer::SyncOrchestratorBuilder, types::Result, utils::{config::Config, logger::init}};
+use arbitrage_bot::{arbitrage::{arbitrage_engine::{ArbitrageEngine, ArbitrageEngineBuilder}, calculator::{ArbitrageCalculator, DefaultArbitrageCalculator}, detector::{ArbitrageDetector, DefaultArbitrageDetector}, validator::{DefaultOpportunityValidator, OpportunityValidator}}, dex::manager::{DexManager, DexManagerBuilder}, event::processor::{DefaultEventProcessor, EventProcessor}, execution::executor::{DefaultTradeExecutor, TradeExecutor}, sync::synchronizer::SyncOrchestratorBuilder, types::Result, utils::{config::Config, logger::init}};
 use tokio::sync::RwLock;
 use tracing::{info, error};
 
@@ -13,9 +13,9 @@ async fn main() -> Result<()> {
     config.validate()?;
     
     let dex_manager = Arc::new(RwLock::new(DexManagerBuilder::new()
-        .with_max_pools_per_dex(config.sync.max_pools_per_dex)
+        .with_max_pools_per_dex(config.sync.max_pools_per_dex.clone())
         .with_state_ttl(config.sync.state_ttl())
-        .with_dex_configs(config.network.dexes)
+        .with_dex_configs(config.network_config().dexes.clone())
         .build()?)
     );
     

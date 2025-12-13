@@ -281,12 +281,10 @@ impl DexManagerBuilder {
                 continue;
             }
                         
-            let pool_ids: Vec<PoolId> = dex_config.pools.iter()
+            let pool_ids = dex_config.pools
+                .iter()
                 .map(|pool_config| {
-                    let object_id = ObjectID::from_hex(&pool_config.address)
-                        .map_err(|e| BotError::Config(format!("Invalid pool address {}: {}", pool_config.address, e)))?;
-                    
-                    ChainAddress::Sui(SuiAddress::new(object_id))
+                    Ok(ChainAddress::Sui(SuiAddress::from_str(&pool_config.address)?))
                 })
                 .collect::<Result<Vec<_>>>()?;
             
@@ -303,7 +301,7 @@ impl DexManagerBuilder {
 
     fn create_dex_state(dex_config: &DexConfig) -> Result<Box<dyn DexState>> {
         match dex_config.id {
-            DexId::Cetus => Ok(Box::new(CetusDexState::from_config(dex_config))),
+            DexId::Cetus => Ok(Box::new(CetusDexState::from_config(dex_config)?)),
             _ => Err(BotError::Config(format!("Unknown DEX ID: {}", dex_config.id))),
         }
     }

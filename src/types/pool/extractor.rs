@@ -98,13 +98,6 @@ impl<'a> FieldExtractor<'a> {
             BotError::Parse(format!("Failed Decimal conversion for '{}'", field))
         })
     }
-
-    pub fn has_type_suffix(sui_object: &SuiObjectData, suffix: &str) -> bool {
-        sui_object.type_
-            .as_ref()
-            .map(|t| t.to_string().contains(suffix))
-            .unwrap_or(false)
-    }
 }
 
 #[cfg(test)]

@@ -1,22 +1,39 @@
+use async_trait::async_trait;
 use sui_sdk::{SuiClient, SuiClientBuilder, rpc_types::{SuiObjectData, SuiObjectDataOptions}, types::{base_types::ObjectID, object::Object}};
 use std::time::Duration;
 use tokio::time::sleep;
 
-use crate::types::Result;
+use crate::{client::client::RpcClient, types::{BotError, Network, Result}};
 
 /// A custom RPC client that extends SuiClient functionality.
+#[derive(Clone)]
 pub struct SuiRpcClient {
     sui_client: SuiClient,
+    network: Network,
 }
 
 impl SuiRpcClient {
-    pub async fn new() -> Result<Self> {
-        let sui_client = SuiClientBuilder::default()
-            .build_mainnet()
-            .await?;
-        Ok(SuiRpcClient { sui_client })
+    pub async fn new(network: Network) -> Result<Self> {
+        let sui_client = match network {
+            Network::SuiMainnet => SuiClientBuilder::default()
+                .build("https://fullnode.mainnet.sui.io:443")
+                .await?,
+            Network::SuiTestnet => SuiClientBuilder::default()
+                .build("https://fullnode.testnet.sui.io:443")
+                .await?,
+            _ => return Err(BotError::Sync(format!("Unsupported network for Sui: {:?}", network))),
+        };
+        
+        Ok(Self { sui_client, network })
     }
 
+    pub async fn new_default() -> Result<Self> {
+        Self::new(Network::SuiMainnet).await
+    }
+}
+
+#[async_trait]
+impl RpcClient for SuiRpcClient {
     /// Fetches multiple objects in batches, with a configurable delay between requests.
     ///
     /// # Arguments
@@ -25,22 +42,22 @@ impl SuiRpcClient {
     /// * `options` - Options to specify which fields and data to return for each object.
     /// * `batch_size` - The number of objects to fetch in a single RPC call.
     /// * `delay_ms` - The delay in milliseconds to wait after each batch request.
-    pub async fn batch_get_objects(
+    async fn batch_get_objects(
         &self,
         object_ids: Vec<ObjectID>,
         options: Option<SuiObjectDataOptions>,
         batch_size: usize,
         delay_ms: u64,
     ) -> Result<Vec<SuiObjectData>> {
+        
         let mut all_data = Vec::new();
         let delay = Duration::from_millis(delay_ms);
+        let options = options.unwrap_or_else(SuiObjectDataOptions::full_content);
 
         for chunk in object_ids.chunks(batch_size) {
-            let results = self.sui_client.read_api()
-                .multi_get_object_with_options(
-                    chunk.to_vec(),
-                    options.clone().unwrap_or_else(SuiObjectDataOptions::full_content),
-                )
+            let results = self.sui_client
+                .read_api()
+                .multi_get_object_with_options(chunk.to_vec(), options.clone())
                 .await?;
 
             for res in results {
@@ -56,7 +73,26 @@ impl SuiRpcClient {
 
         Ok(all_data)
     }
+    
+    async fn get_object(
+        &self,
+        object_id: ObjectID,
+        options: Option<SuiObjectDataOptions>,
+    ) -> Result<Option<SuiObjectData>> {
+        let options = options.unwrap_or_else(SuiObjectDataOptions::full_content);
+        let result = self.sui_client
+            .read_api()
+            .get_object_with_options(object_id, options)
+            .await?;
+        
+        Ok(result.data)
+    }
+    
+    fn get_network(&self) -> Network {
+        self.network
+    }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -72,13 +108,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_client_initialization() {
-        let client = SuiRpcClient::new().await;
+        let client = SuiRpcClient::new_default().await;
         assert!(client.is_ok(), "Failed to initialize SuiRpcClient");
     }
 
     #[tokio::test]
     async fn test_fetch_single_cetus_pool() {
-        let client = SuiRpcClient::new().await.expect("Failed to create client");
+        let client = SuiRpcClient::new_default().await.expect("Failed to create client");
         
         let pool_id = ObjectID::from_str(USDC_HASUI_POOL)
             .expect("Invalid pool address");
@@ -101,7 +137,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fetch_both_cetus_pools() {
-        let client = SuiRpcClient::new().await.expect("Failed to create client");
+        let client = SuiRpcClient::new_default().await.expect("Failed to create client");
         
         let pool_ids = vec![
             ObjectID::from_str(USDC_HASUI_POOL).expect("Invalid USDC/haSUI pool address"),
@@ -129,7 +165,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_batch_fetch_with_delay() {
-        let client = SuiRpcClient::new().await.expect("Failed to create client");
+        let client = SuiRpcClient::new_default().await.expect("Failed to create client");
         
         let pool_ids = vec![
             ObjectID::from_str(USDC_HASUI_POOL).expect("Invalid pool address"),
@@ -163,7 +199,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fetch_pool_content_details() {
-        let client = SuiRpcClient::new().await.expect("Failed to create client");
+        let client = SuiRpcClient::new_default().await.expect("Failed to create client");
         
         let pool_id = ObjectID::from_str(HASUI_SUI_POOL)
             .expect("Invalid pool address");
@@ -197,7 +233,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_empty_object_list() {
-        let client = SuiRpcClient::new().await.expect("Failed to create client");
+        let client = SuiRpcClient::new_default().await.expect("Failed to create client");
         
         let results = client.batch_get_objects(
             vec![],

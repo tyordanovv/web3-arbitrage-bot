@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use sui_sdk::types::base_types::ObjectID;
 use std::str::FromStr;
 
-use crate::types::{BotError, Network};
+use crate::types::{BotError, Network, Result};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ChainAddress {
@@ -53,7 +53,10 @@ impl SuiAddress {
     }
 
     pub fn from_str(hex_str: &str) -> Result<Self> {
-        Self::new(ObjectID::from_hex_literal(hex_str).map_err(|e| BotError::Parse(format!("Could not parse {}"))));
+        let id = ObjectID::from_hex_literal(hex_str)
+            .map_err(|e| BotError::Parse(format!("Could not parse {}: {}", hex_str, e)))?;
+
+        Ok(Self::new(id))
     }
 
     pub fn random() -> Self {
