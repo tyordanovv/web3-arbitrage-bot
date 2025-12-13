@@ -1,62 +1,66 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
-use chrono::Duration;
-use tokio::sync::RwLock;
+use async_trait::async_trait;
 
-use crate::types::{DexId, FeeStructure, PoolId, PoolState, Price, Timestamp, TokenPair};
+use crate::{types::{DexId, HealthStatus, pool_state::{ PoolId, PoolState}, Price, PriceUpdate, RawEvent, Result, SwapEvent, TokenPair}};
 
-/// State for a single DEX instance
-pub struct DexState {
-    pub dex_id: DexId,
-    pub config: DexConfig,
-    pub pools: HashMap<PoolId, PoolState>,
-    pub prices: Arc<RwLock<HashMap<TokenPair, Price>>>,
-    pub health: DexHealthState,
-    pub sync_state: SyncState,
-    pub stats: DexStatistics,
-}
-
-/// Health monitoring for a DEX
-pub struct DexHealthState {
-    pub last_event: Option<Timestamp>,
-    pub last_heartbeat: Timestamp,
-    pub last_sync: Timestamp,
-    pub consecutive_failures: u32,
-    pub is_healthy: bool,
-}
-
-/// Synchronization state
-pub struct SyncState {
-    pub last_full_sync: Timestamp,
-    pub next_sync_due: Timestamp,
-    pub sync_interval: Duration,
-    pub heartbeat_interval: Duration,
-    pub heartbeat_timeout: Duration,
-}
-
-/// DEX configuration
-pub struct DexConfig {
-    pub name: DexId,
-    pub package_id: String,
-    pub monitored_pairs: Vec<TokenPair>,
-    pub pool_addresses: HashMap<TokenPair, String>,
-    pub fee_structure: FeeStructure,
-    pub sync_settings: SyncSettings,
-}
-
-pub struct SyncSettings {
-    pub heartbeat_interval_secs: u64,
-    pub heartbeat_timeout_secs: u64,
-    pub periodic_sync_interval_secs: u64,
-    pub enable_fallback_polling: bool,
-}
-
-/// Statistics tracking
-pub struct DexStatistics {
-    pub events_received: u64,
-    pub events_processed: u64,
-    pub polls_executed: u64,
-    pub syncs_completed: u64,
-    pub errors_encountered: u64,
-    pub last_error: Option<(Timestamp, String)>,
+#[async_trait]
+pub trait DexState: Send + Sync {
+    // ========== IDENTITY ==========
+    fn dex_id(&self) -> DexId;
+    
+    // ========== INITIALIZATION ==========
+    async fn initialize(&mut self) -> Result<()>;
+    
+    // ========== POOL STATE MANAGEMENT ==========
+    
+    /// Get current state of a specific pool
+    async fn get_pool_state(&self, pool_id: &PoolId) -> Result<PoolState>;
+    
+    /// Get all pool states managed by this DEX
+    async fn get_all_pool_states(&self) -> Result<Vec<PoolState>>;
+    
+    /// Update pool state (used by synchronizer)
+    async fn update_pool_state(&mut self, pool_state: PoolState) -> Result<()>;
+    
+    /// Fetch fresh pool state from external source (RPC/API)
+    async fn fetch_pool_state(&self, pool_id: &PoolId) -> Result<PoolState>;
+    
+    /// Fetch all pool states from external source
+    async fn fetch_all_pools(&self) -> Result<Vec<PoolState>>;
+    
+    // ========== EVENT HANDLING ==========
+    
+    /// Process parsed event and update state
+    fn process_swap_event(&mut self, event: SwapEvent) -> Result<PriceUpdate>;
+    
+    // ========== PRICE OPERATIONS ==========
+    
+    /// Calculate price from pool state
+    fn calculate_price(&self, pool: &PoolState) -> Result<Price>;
+    
+    /// Get current price for a token pair
+    fn get_price(&self, pair: &TokenPair) -> Option<Price>;
+    
+    /// Get all current prices
+    fn get_all_prices(&self) -> HashMap<TokenPair, Price>;
+    
+    // ========== HEALTH & SYNC ==========
+    
+    /// Perform health check
+    async fn heartbeat(&mut self) -> Result<HealthStatus>;
+    
+    /// Check if DEX is healthy
+    fn is_healthy(&self) -> bool;
+    
+    /// Get last update time
+    fn last_update_time(&self) -> std::time::Instant;
+    
+    /// Check if state is stale
+    fn is_state_stale(&self) -> bool {
+        self.last_update_time().elapsed() > std::time::Duration::from_secs(3600) // 1 hour
+    }
+    
+    /// Get monitored pools for this DEX
+    fn get_monitored_pools(&self) -> Vec<PoolId>;
 }

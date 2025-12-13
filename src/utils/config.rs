@@ -5,25 +5,6 @@ use std::str::FromStr;
 
 use crate::types::{BotError, DexId, MIN_PROFIT_PERCENT, Network, Result, TokenInfo};
 
-/// Simple, focused configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
-    /// Network settings
-    pub network: NetworkConfig,
-    
-    /// Arbitrage settings
-    pub arbitrage: ArbitrageConfig,
-    
-    /// Execution settings
-    pub execution: ExecutionConfig,
-
-    /// Opportunity validation settings
-    pub validation: ValidationConfig,
-
-    /// Logging settings
-    pub logging: LoggingConfig, 
-}
-
 /// Network configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkConfig {
@@ -156,6 +137,89 @@ impl Default for LoggingConfig {
     }
 }
 
+/// Consolidated synchronization configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyncConfig {
+    /// Maximum number of pools per DEX
+    pub max_pools_per_dex: usize,
+    
+    /// Enable periodic state synchronization
+    pub enable_periodic_sync: bool,
+    
+    /// Normal sync interval in seconds
+    pub sync_interval_seconds: u64,
+    
+    /// Emergency sync interval in seconds (used when issues occur)
+    pub emergency_sync_interval_seconds: u64,
+    
+    /// State time-to-live in seconds (when state is considered stale)
+    pub state_ttl_seconds: u64,
+    
+    /// Batch size for pool synchronization
+    pub batch_size: usize,
+    
+    /// Maximum retry attempts for failed syncs
+    pub max_retries: u32,
+    
+    /// Delay between retries in seconds
+    pub retry_delay_seconds: u64,
+}
+
+impl Default for SyncConfig {
+    fn default() -> Self {
+        Self {
+            max_pools_per_dex: 1000,
+            enable_periodic_sync: true,
+            sync_interval_seconds: 3600,        // 1 hour
+            emergency_sync_interval_seconds: 300, // 5 minutes
+            state_ttl_seconds: 3600,            // 1 hour
+            batch_size: 10,
+            max_retries: 3,
+            retry_delay_seconds: 5,
+        }
+    }
+}
+
+impl SyncConfig {
+    // Helper methods to convert to Duration
+    pub fn sync_interval(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(self.sync_interval_seconds)
+    }
+    
+    pub fn emergency_sync_interval(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(self.emergency_sync_interval_seconds)
+    }
+    
+    pub fn state_ttl(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(self.state_ttl_seconds)
+    }
+    
+    pub fn retry_delay(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(self.retry_delay_seconds)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Config {
+    /// Network settings
+    pub network: NetworkConfig,
+    
+    /// Arbitrage settings
+    pub arbitrage: ArbitrageConfig,
+    
+    /// Execution settings
+    pub execution: ExecutionConfig,
+
+    /// Opportunity validation settings
+    pub validation: ValidationConfig,
+
+    /// Logging settings
+    pub logging: LoggingConfig, 
+
+    /// State synchronization settings (replaces both DexManagerConfig and SyncConfig)
+    pub sync: SyncConfig,
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -163,7 +227,8 @@ impl Default for Config {
             arbitrage: ArbitrageConfig::default(),
             execution: ExecutionConfig::default(),
             validation: ValidationConfig::default(),
-            logging: LoggingConfig::default()
+            logging: LoggingConfig::default(),
+            sync: SyncConfig::default(),
         }
     }
 }
@@ -183,6 +248,14 @@ impl Config {
     
     pub fn execution_config(&self) -> &ExecutionConfig {
         &self.execution
+    }
+
+    pub fn logging_config(&self) -> &LoggingConfig {
+        &self.logging
+    }
+
+    pub fn sync_config(&self) -> &SyncConfig {
+        &self.sync
     }
 
     /// Load config from file or use defaults
@@ -232,7 +305,7 @@ impl Config {
                 BotError::Config(format!("Failed to parse config file {}: {}", path, e))
             })?;
         
-        info!("✅ Config parsed successfully from: {}", path);
+        info!("Config parsed successfully from: {}", path);
         Ok(config)
     }
     
@@ -259,14 +332,24 @@ impl Config {
         Ok(())
     }
     
-    /// Log the loaded configuration (without sensitive data)
+    /// Log the loaded configuration
     fn log_loaded_config(&self) {
         info!("=== LOADED CONFIGURATION ===");
         info!("Network: {:?}", self.network.network);
         info!("RPC URL: {}", self.network.rpc_url);
         info!("WebSocket URL: {}", self.network.ws_url);
         
-        // Log DEX configurations
+        info!("Sync Settings:");
+        info!("  Max pools per DEX: {}", self.sync.max_pools_per_dex);
+        info!("  Enable periodic sync: {}", self.sync.enable_periodic_sync);
+        info!("  Sync interval: {}s", self.sync.sync_interval_seconds);
+        info!("  Emergency sync interval: {}s", self.sync.emergency_sync_interval_seconds);
+        info!("  State TTL: {}s", self.sync.state_ttl_seconds);
+        info!("  Batch size: {}", self.sync.batch_size);
+        info!("  Max retries: {}", self.sync.max_retries);
+        info!("  Retry delay: {}s", self.sync.retry_delay_seconds);
+
+        
         info!("Configured DEXs ({} total):", self.network.dexes.len());
         for (i, dex) in self.network.dexes.iter().enumerate() {
             info!("  {}. {:?} - enabled: {}, package: {}, event_type: {}", 

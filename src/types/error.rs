@@ -11,9 +11,6 @@ pub enum BotError {
     #[error("Event error: {0}")]
     Event(String),
     
-    #[error("RPC error: {0}")]
-    Rpc(String),
-    
     #[error("WebSocket error: {0}")]
     WebSocket(String),
     
@@ -55,6 +52,9 @@ pub enum BotError {
     
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
+
+    #[error("Sui rpc read error: {0}")]
+    SuiReadRpc(String),
     
     #[error("Unknown error: {0}")]
     Unknown(String),
@@ -68,5 +68,11 @@ impl BotError {
             dex,
             message: message.into(),
         }
+    }
+}
+
+impl From<sui_sdk::error::Error> for BotError {
+    fn from(err: sui_sdk::error::Error) -> Self {
+        BotError::SuiReadRpc(err.to_string())
     }
 }

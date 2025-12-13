@@ -1,0 +1,13 @@
+{
+    "rust-analyzer.files.excludeDirs": [
+        "target",
+        "move/target",
+        "generated",
+        "bindings",
+        "docs",
+        "scripts"
+    ],
+    "rust-analyzer.cargo.runBuildScripts": false,
+    "rust-analyzer.cargo.buildScripts.enable": false,
+    "rust-analyzer.procMacro.enable": false,
+}

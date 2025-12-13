@@ -9,3 +9,4 @@ pub mod execution;
 pub mod sync;
 pub mod types;
 pub mod utils;
+pub mod client;
