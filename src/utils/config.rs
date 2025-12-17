@@ -29,6 +29,7 @@ impl Default for NetworkConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DexConfig {
     pub id: DexId,
+    pub network: Network,
     pub package_id: String,
     pub event_type: String,
     pub enabled: bool,

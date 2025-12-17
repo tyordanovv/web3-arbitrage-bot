@@ -55,6 +55,9 @@ pub enum BotError {
 
     #[error("Sui rpc read error: {0}")]
     SuiReadRpc(String),
+
+    #[error("Channel error: {0}")]
+    ChannelError(String),
     
     #[error("Unknown error: {0}")]
     Unknown(String),

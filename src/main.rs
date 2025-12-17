@@ -1,7 +1,14 @@
 use std::sync::Arc;
 
-use arbitrage_bot::{arbitrage::{arbitrage_engine::{ArbitrageEngine, ArbitrageEngineBuilder}, calculator::{ArbitrageCalculator, DefaultArbitrageCalculator}, detector::{ArbitrageDetector, DefaultArbitrageDetector}, validator::{DefaultOpportunityValidator, OpportunityValidator}}, dex::manager::{DexManager, DexManagerBuilder}, event::processor::{DefaultEventProcessor, EventProcessor}, execution::executor::{DefaultTradeExecutor, TradeExecutor}, sync::{state::StateManager, synchronizer::SyncOrchestratorBuilder}, types::Result, utils::{config::Config, logger::init}};
-use tokio::sync::RwLock;
+use arbitrage_bot::{
+    arbitrage::{
+        arbitrage_engine::{ ArbitrageEngine, ArbitrageEngineBuilder }, 
+        calculator::{ ArbitrageCalculator, DefaultArbitrageCalculator }, 
+        detector::{ ArbitrageDetector, DefaultArbitrageDetector }, 
+        validator::{ DefaultOpportunityValidator, OpportunityValidator }
+    }, dex::registry::DexRegistryBuilder, event::processor::{ DefaultEventProcessor, EventProcessor }, execution::executor::{ DefaultTradeExecutor, TradeExecutor }, sync::{ reader::StateReader, state::StateUpdater, synchronizer::SyncOrchestratorBuilder, update_producer::UpdateProducer}, types::Result, utils::{config::Config, logger::init}
+};
+use tokio::sync::mpsc;
 use tracing::{info, error};
 
 #[tokio::main]
@@ -11,22 +18,31 @@ async fn main() -> Result<()> {
     
     let config = Config::load()?;
     config.validate()?;
-    
-    let dex_manager = Arc::new(RwLock::new(DexManagerBuilder::new()
-        .with_max_pools_per_dex(config.sync.max_pools_per_dex.clone())
-        .with_state_ttl(config.sync.state_ttl())
+
+    let dex_registry = Arc::new(DexRegistryBuilder::new()
+        .with_max_pools_per_dex(config.sync_config().max_pools_per_dex.clone())
         .with_dex_configs(config.network_config().dexes.clone())
-        .build()?)
+        .build()?
     );
     
+    let (batch_tx, batch_rx) = mpsc::channel(100);
+    let state_reader = Arc::new(StateReader::new());
+
     // Create StateManager with integrated StateReader
-    let state_manager = StateManager::new(dex_manager.clone());
-    let state_reader = state_manager.get_reader();
+    let mut state_updater = StateUpdater::new(batch_rx, state_reader.clone(), dex_registry.clone());
+    tokio::spawn(async move {
+        if let Err(e) = state_updater.run().await {
+            error!("StateUpdater crashed: {}", e);
+        }
+    });
+
+    let update_producer = Arc::new(UpdateProducer::new(batch_tx));
 
     let orchestrator = Arc::new(SyncOrchestratorBuilder::new()
-        .with_dex_manager(dex_manager.clone())
         .with_rpc_endpoint(config.network_config().rpc_url.clone())
         .with_config(config.sync_config().clone())
+        .with_dex_registry(dex_registry)
+        .with_update_producer(update_producer.clone())
         .build().await?
     );
 
@@ -37,21 +53,8 @@ async fn main() -> Result<()> {
     }
     info!("Initial synchronization completed successfully");
 
-    // Build initial snapshot for lock-free reads
-    info!("Building initial state snapshot...");
-    if let Err(e) = state_manager.update_multiple_pools(vec![]).await {
-        error!("Failed to build initial snapshot: {}", e);
-    } else {
-        let stats = state_reader.get_stats();
-        info!(
-            pool_count = stats.pool_count,
-            dex_count = stats.dex_count,
-            "Initial snapshot built successfully"
-        );
-    }
-
     let event_processor = Box::new(DefaultEventProcessor::new(
-        dex_manager.clone(),
+        update_producer.clone(),
         config.network_config().clone(),
     )) as Box<dyn EventProcessor>;
 

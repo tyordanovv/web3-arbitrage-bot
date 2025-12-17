@@ -1,19 +1,21 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc, time::Duration};
+use futures::channel::mpsc;
 use tokio::sync::RwLock;
 use tracing::{info, warn, error, debug};
 
 use crate::{
     client::sui_rpc::SuiRpcClient, 
-    dex::manager::DexManager, 
-    sync::{fetcher::PoolStateFetcher, state::StateManager}, 
-    types::{BotError, ChainAddress, DexId, Network, Result, pool_state::PoolId}, 
+    dex::registry::DexRegistry, 
+    sync::{fetcher::PoolStateFetcher, state::StateUpdater, update_producer::{self, PoolUpdate, UpdateProducer}}, 
+    types::{BotError, ChainAddress, DexId, Network, Result, SwapDelta, pool_state::PoolId}, 
     utils::config::SyncConfig
 };
 
 pub struct SyncOrchestrator {
-    state_manager: Arc<StateManager>,
+    update_producer: Arc<UpdateProducer>, 
     pool_fetcher: Arc<PoolStateFetcher>,
     config: SyncConfig,
+    dex_registry: Arc<DexRegistry>
 }
 
 #[derive(Debug, Clone)]
@@ -25,14 +27,16 @@ pub enum SyncType {
 
 impl SyncOrchestrator {
     pub fn new(
-        state_manager: Arc<StateManager>,
+        update_producer: Arc<UpdateProducer>, 
         pool_fetcher: Arc<PoolStateFetcher>,
         config: SyncConfig,
+        dex_registry: Arc<DexRegistry>
     ) -> Self {
         Self {
-            state_manager,
+            update_producer, 
             pool_fetcher,
             config,
+            dex_registry,
         }
     }
 
@@ -45,15 +49,15 @@ impl SyncOrchestrator {
         
         let pools_by_network_dex = match sync_type {
             SyncType::Initial | SyncType::All => {
-                self.state_manager.get_monitored_pools_grouped().await
+                self.dex_registry.get_monitored_pools_grouped()
             }
             SyncType::Stale => {
-                let stale_pools = self.state_manager.get_stale_pools().await;
+                let stale_pools = self.dex_registry.get_stale_pools(Duration::from_secs(3600));
                 if stale_pools.is_empty() {
                     debug!("No stale pools found");
                     return Ok(0);
                 }
-                self.state_manager.group_pools_by_network_and_dex(&stale_pools).await
+                self.dex_registry.group_pools_by_network_and_dex(&stale_pools)
             }
         };
 
@@ -93,7 +97,16 @@ impl SyncOrchestrator {
                 
                 match self.pool_fetcher.fetch_batch(&network, &dex_id, &pools).await {
                     Ok(pool_states) => {
-                        let updated = self.state_manager.update_multiple_pools(pool_states).await?;
+                        let updates = pool_states
+                            .into_iter()
+                            .map(PoolUpdate::FullState)
+                            .collect::<Vec<_>>();
+
+                        let updated = self
+                            .update_producer
+                            .update_multiple_pools(updates)
+                            .await?;
+                        // let updated = self.update_producer.update_multiple_pools(PoolUpdate::FullState(pool_states)).await?;
                         success_count += updated;
                         debug!("Updated {}/{} {} pools on {}", updated, pools.len(), dex_id, network);
                     }
@@ -110,23 +123,20 @@ impl SyncOrchestrator {
 }
 
 pub struct SyncOrchestratorBuilder {
-    dex_manager: Option<Arc<RwLock<DexManager>>>,
     rpc_endpoint: Option<String>,
+    update_producer: Option<Arc<UpdateProducer>>, 
     config: Option<SyncConfig>,
+    dex_registry: Option<Arc<DexRegistry>>,
 }
 
 impl SyncOrchestratorBuilder {
     pub fn new() -> Self {
         Self {
-            dex_manager: None,
             rpc_endpoint: None,
             config: None,
+            update_producer: None,
+            dex_registry: None,
         }
-    }
-
-    pub fn with_dex_manager(mut self, dex_manager: Arc<RwLock<DexManager>>) -> Self {
-        self.dex_manager = Some(dex_manager);
-        self
     }
 
     pub fn with_rpc_endpoint(mut self, endpoint: String) -> Self {
@@ -139,20 +149,33 @@ impl SyncOrchestratorBuilder {
         self
     }
 
+    pub fn with_update_producer(mut self, update_producer: Arc<UpdateProducer>) -> Self {
+        self.update_producer = Some(update_producer);
+        self
+    }
+
+    pub fn with_dex_registry(mut self, dex_registry: Arc<DexRegistry>) -> Self {
+        self.dex_registry = Some(dex_registry);
+        self
+    }
+    
+
     pub async fn build(self) -> Result<SyncOrchestrator> {
-        let dex_manager = self.dex_manager
-            .ok_or_else(|| BotError::Config("DexManager is required".to_string()))?;
-        
         let rpc_endpoint = self.rpc_endpoint
             .ok_or_else(|| BotError::Config("RPC endpoint is required".to_string()))?;
         
         let config = self.config
             .ok_or_else(|| BotError::Config("SyncConfig is required".to_string()))?;
 
-        let state_manager = Arc::new(StateManager::new(dex_manager));
+        let update_producer = self.update_producer
+            .ok_or_else(|| BotError::Config("Update sender is required".to_string()))?;
+
+        let dex_registry = self.dex_registry
+            .ok_or_else(|| BotError::Config("DexRegistry is required".to_string()))?;
+
         let pool_fetcher = Arc::new(PoolStateFetcher::new(config.clone()).await?);
 
-        Ok(SyncOrchestrator::new(state_manager, pool_fetcher, config))
+        Ok(SyncOrchestrator::new(update_producer, pool_fetcher, config, dex_registry))
     }
 }
 

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 use sui_sdk::types::base_types::ObjectID;
 use tracing::{debug, info, warn, error};
-
+use crate::client::client::RpcClient;
 use crate::{client::{client::RpcClientEnum, sui_rpc::SuiRpcClient}, types::{BotError, ChainAddress, DexId, Network, Result, cetus::CetusPoolParser, pool_parser::PoolParserRegistry, pool_state::{ PoolId, PoolState}, turbos::TurbosPoolParser}, utils::config::SyncConfig};
 
 pub struct PoolStateFetcher {

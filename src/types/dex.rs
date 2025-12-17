@@ -150,8 +150,8 @@ impl RawEvent {
 }
 
 /// Parsed swap event from a DEX
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SwapEvent {
+#[derive(Debug, Clone)]
+pub struct SwapDelta {
     pub dex_id: DexId,
     pub pool_id: PoolId,
     pub amount_in: u64,
@@ -164,7 +164,7 @@ pub struct SwapEvent {
     pub sequence: Option<u64>,
 }
 
-impl SwapEvent {
+impl SwapDelta {
     pub fn new() -> Self {
         Self {
             dex_id: DexId::Cetus,

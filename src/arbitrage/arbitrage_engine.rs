@@ -82,7 +82,7 @@ impl ArbitrageEngine {
     }
     
     async fn run_main_loop(&mut self) -> Result<()> {
-        let mut interval = tokio::time::interval(Duration::from_millis(20)); // 50Hz
+        let mut interval = tokio::time::interval(Duration::from_millis(2000)); // 20 = 50Hz
         let mut sync_interval = tokio::time::interval(Duration::from_secs(3600)); // 1 hour
         
         while self.is_running {

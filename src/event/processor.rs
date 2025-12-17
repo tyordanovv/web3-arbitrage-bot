@@ -4,10 +4,7 @@ use tracing::{info, warn};
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    dex::manager::DexManager, 
-    event::{context::WsContext, websocket::{DexWebSocket, WebSocketManager}}, 
-    types::{ BotError, DexId, Network, RawEvent, Result, SwapEvent }, 
-    utils::config::{DexConfig, NetworkConfig}
+    event::{context::WsContext, websocket::{DexWebSocket, WebSocketManager}}, sync::update_producer::UpdateProducer, types::{ BotError, DexId, Network, RawEvent, Result, SwapDelta }, utils::config::{DexConfig, NetworkConfig}
 };
 
 #[async_trait]
@@ -31,7 +28,7 @@ pub struct ProcessorStatus {
 }
 
 pub struct DefaultEventProcessor {
-    dex_manager: Arc<RwLock<DexManager>>,
+    update_producer: Arc<UpdateProducer>, 
     ws_managers: HashMap<DexId, JoinHandle<()>>,
     is_running: bool,
     network_config: NetworkConfig,
@@ -40,7 +37,7 @@ pub struct DefaultEventProcessor {
 
 impl DefaultEventProcessor {
     pub fn new(
-        dex_manager: Arc<RwLock<DexManager>>,
+        update_producer: Arc<UpdateProducer>, 
         network_config: NetworkConfig,
     ) -> Self {      
         let dex_configs = network_config.dexes
@@ -49,7 +46,8 @@ impl DefaultEventProcessor {
             .collect();
 
         Self {
-            dex_manager,
+            // dex_manager,
+            update_producer,
             ws_managers: HashMap::new(),
             is_running: false,
             network_config,
@@ -89,14 +87,13 @@ impl DefaultEventProcessor {
         Ok(())
     }
 
-    async fn process_event(&self, dex_id: DexId, raw_event: RawEvent) -> Result<SwapEvent> {
+    async fn process_event(&self, dex_id: DexId, raw_event: RawEvent) -> Result<SwapDelta> {
         info!("Processing event for DEX {:?}: {:?}", dex_id, raw_event);
-        Ok(SwapEvent::new())
+        Ok(SwapDelta::new())
     }
 
     async fn get_enabled_dex_ids(&self) -> Result<HashMap<Network, Vec<DexId>>> {
-        let manager = self.dex_manager.read().await;
-        Ok(manager.healthy_dexes())
+        Ok(HashMap::new())
     }
 
     fn build_ws_manager_from_config(
@@ -135,7 +132,6 @@ impl EventProcessor for DefaultEventProcessor {
 
         self.initialize_websockets(event_sender).await?;
         
-        let dex_manager = self.dex_manager.clone();
         tokio::spawn(async move {
             info!("Event processing loop started");
             

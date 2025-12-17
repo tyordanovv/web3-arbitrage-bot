@@ -55,7 +55,7 @@ impl ArbitrageDetector for DefaultArbitrageDetector {
         let snapshot = self.state_reader.get_snapshot();
         let snapshot_read_time = snapshot_start.elapsed();
 
-        debug!(
+        info!(
             pool_count = snapshot.pool_count,
             dex_count = snapshot.dex_count,
             snapshot_age_ms = snapshot.snapshot_time.elapsed().as_millis(),

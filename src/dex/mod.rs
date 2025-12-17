@@ -1,3 +1,1 @@
-pub mod cetus;
-pub mod state;
-pub mod manager;
+pub mod registry;
