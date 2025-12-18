@@ -9,6 +9,7 @@ use crate::types::{DexId, pool_state::{PoolId, PoolState}};
 /// This is immutable and designed for fast, lock-free access
 #[derive(Debug, Clone)]
 pub struct PoolSnapshot {
+    // TODO Use im-rs or similar for persistent collections
     /// All pools in a contiguous Vec for cache-friendly iteration
     /// Pools are grouped by DEX for efficient slicing
     pools: Arc<Vec<PoolState>>,
