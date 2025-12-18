@@ -6,7 +6,11 @@ use arbitrage_bot::{
         calculator::{ ArbitrageCalculator, DefaultArbitrageCalculator }, 
         detector::{ ArbitrageDetector, DefaultArbitrageDetector }, 
         validator::{ DefaultOpportunityValidator, OpportunityValidator }
-    }, dex::registry::DexRegistryBuilder, event::processor::{ DefaultEventProcessor, EventProcessor }, execution::executor::{ DefaultTradeExecutor, TradeExecutor }, sync::{ reader::StateReader, state::StateUpdater, synchronizer::SyncOrchestratorBuilder, update_producer::UpdateProducer}, types::Result, utils::{config::Config, logger::init}
+    }, dex::registry::DexRegistryBuilder, 
+    event::processor::{ DefaultEventProcessor, EventProcessor }, 
+    execution::executor::{ DefaultTradeExecutor, TradeExecutor }, 
+    sync::{ reader::StateReader, state::StateUpdater, synchronizer::StateSynchronizer, update_producer::UpdateProducer}, 
+    types::Result, utils::{config::Config, logger::init}
 };
 use tokio::sync::mpsc;
 use tracing::{info, error};
@@ -15,46 +19,80 @@ use tracing::{info, error};
 async fn main() -> Result<()> {
     init();
     info!("Starting Arbitrage Bot");
-    
+
     let config = Config::load()?;
     config.validate()?;
 
-    let dex_registry = Arc::new(DexRegistryBuilder::new()
-        .with_max_pools_per_dex(config.sync_config().max_pools_per_dex.clone())
-        .with_dex_configs(config.network_config().dexes.clone())
-        .build()?
+    // Build core components
+    let components = build_components(&config).await?;
+
+    // Initialize state synchronization
+    info!("Performing initial state synchronization...");
+    components.synchronizer.initialize().await?;
+    info!("Initial synchronization completed successfully");
+
+    // Build and start the arbitrage engine
+    let synchronizer = components.synchronizer.clone();
+    let engine = build_engine(&config, components)?;
+
+    // Run with graceful shutdown
+    run_with_shutdown(engine, synchronizer).await
+}
+
+struct Components {
+    state_reader: Arc<StateReader>,
+    update_producer: Arc<UpdateProducer>,
+    synchronizer: Arc<StateSynchronizer>,
+}
+
+async fn build_components(config: &Config) -> Result<Components> {
+    // Build DEX registry
+    let dex_registry = Arc::new(
+        DexRegistryBuilder::new()
+            .with_max_pools_per_dex(config.sync_config().max_pools_per_dex.clone())
+            .with_dex_configs(config.network_config().dexes.clone())
+            .build()?,
     );
-    
+
+    // Create state management pipeline
     let (batch_tx, batch_rx) = mpsc::channel(100);
     let state_reader = Arc::new(StateReader::new());
+    let update_producer = Arc::new(UpdateProducer::new(batch_tx));
 
-    // Create StateManager with integrated StateReader
-    let mut state_updater = StateUpdater::new(batch_rx, state_reader.clone(), dex_registry.clone());
+    // Start state updater
+    let mut state_updater = StateUpdater::new(
+        batch_rx,
+        state_reader.clone(),
+        dex_registry.clone(),
+    );
+    
     tokio::spawn(async move {
         if let Err(e) = state_updater.run().await {
             error!("StateUpdater crashed: {}", e);
         }
     });
 
-    let update_producer = Arc::new(UpdateProducer::new(batch_tx));
-
-    let orchestrator = Arc::new(SyncOrchestratorBuilder::new()
-        .with_rpc_endpoint(config.network_config().rpc_url.clone())
-        .with_config(config.sync_config().clone())
-        .with_dex_registry(dex_registry)
-        .with_update_producer(update_producer.clone())
-        .build().await?
+    // Build synchronizer
+    let synchronizer = Arc::new(
+        StateSynchronizer::builder()
+            .with_rpc_endpoint(config.network_config().rpc_url.clone())
+            .with_config(config.sync_config().clone())
+            .with_dex_registry(dex_registry.clone())
+            .with_update_producer(update_producer.clone())
+            .build()
+            .await?,
     );
 
-    info!("Performing initial state synchronization...");
-    if let Err(e) = orchestrator.initialize().await {
-        error!("Initial synchronization failed: {}", e);
-        return Err(e);
-    }
-    info!("Initial synchronization completed successfully");
+    Ok(Components {
+        state_reader,
+        update_producer,
+        synchronizer,
+    })
+}
 
+fn build_engine(config: &Config, components: Components) -> Result<ArbitrageEngine> {
     let event_processor = Box::new(DefaultEventProcessor::new(
-        update_producer.clone(),
+        components.update_producer,
         config.network_config().clone(),
     )) as Box<dyn EventProcessor>;
 
@@ -62,35 +100,32 @@ async fn main() -> Result<()> {
         config.arbitrage_config().clone(),
     )) as Box<dyn ArbitrageCalculator>;
 
-    // Detector now uses StateReader for lock-free reads
     let detector = Box::new(DefaultArbitrageDetector::new(
-        state_reader.clone(),
+        components.state_reader.clone(),
         calculator,
     )) as Box<dyn ArbitrageDetector>;
-    
+
     let executor = Box::new(DefaultTradeExecutor::new(
         config.execution_config().clone(),
     )) as Box<dyn TradeExecutor>;
 
-    // Validator also uses StateReader for lock-free reads
     let validator = Box::new(DefaultOpportunityValidator::new(
-        state_reader.clone(),
+        components.state_reader,
         config.validation_config().clone(),
     )) as Box<dyn OpportunityValidator>;
-    
-    let engine = ArbitrageEngineBuilder::new()
+
+    ArbitrageEngineBuilder::new()
         .with_event_processor(event_processor)
         .with_detector(detector)
         .with_executor(executor)
         .with_validator(validator)
-        .with_sync_orchestrator(orchestrator)
-        .build()?;
-
-    setup_graceful_shutdown(engine).await
+        .build()
 }
 
-/// Handle graceful shutdown
-async fn setup_graceful_shutdown(mut engine: ArbitrageEngine) -> Result<()> {
+async fn run_with_shutdown(
+    mut engine: ArbitrageEngine,
+    synchronizer: Arc<StateSynchronizer>,
+) -> Result<()> {
     let ctrl_c = async {
         tokio::signal::ctrl_c()
             .await
@@ -108,6 +143,16 @@ async fn setup_graceful_shutdown(mut engine: ArbitrageEngine) -> Result<()> {
     #[cfg(not(unix))]
     let terminate = std::future::pending::<()>();
 
+    // Start background synchronization
+    let sync_handle = tokio::spawn({
+        let synchronizer = synchronizer.clone();
+        async move {
+            if let Err(e) = synchronizer.run_periodic_sync().await {
+                error!("Periodic sync failed: {}", e);
+            }
+        }
+    });
+
     tokio::select! {
         _ = ctrl_c => {
             info!("Received Ctrl-C, shutting down gracefully...");
@@ -115,18 +160,16 @@ async fn setup_graceful_shutdown(mut engine: ArbitrageEngine) -> Result<()> {
         _ = terminate => {
             info!("Received SIGTERM, shutting down gracefully...");
         },
-        result = engine.start() => {
+        result = engine.run() => {
             if let Err(e) = result {
                 error!("Engine stopped with error: {}", e);
             }
         }
     }
 
-    // Perform graceful shutdown
-    if let Err(e) = engine.stop().await {
-        error!("Error during shutdown: {}", e);
-        return Err(e);
-    }
+    // Cleanup
+    sync_handle.abort();
+    engine.shutdown().await?;
 
     info!("Arbitrage Bot shutdown complete");
     Ok(())
