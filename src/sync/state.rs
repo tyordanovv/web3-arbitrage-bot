@@ -9,6 +9,7 @@ use crate::{dex::registry::DexRegistry, sync::{reader::{PoolSnapshot, StateReade
 pub struct StateUpdater {
     batch_rx: mpsc::Receiver<Vec<PoolUpdate>>,
     // TODO RwLock on teh pool id not the whole state
+    // TODO maybe sharded write state
     current_state: RwLock<HashMap<PoolId, PoolState>>,
     reader: Arc<StateReader>,
     dex_registry: Arc<DexRegistry>,
