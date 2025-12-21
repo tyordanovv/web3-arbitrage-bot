@@ -7,18 +7,6 @@ use crate::{
     event::{context::WsContext, websocket::{DexWebSocket, WebSocketManager}}, sync::update_producer::UpdateProducer, types::{ BotError, DexId, Network, RawEvent, Result, SwapDelta }, utils::config::{DexConfig, NetworkConfig}
 };
 
-#[async_trait]
-pub trait EventProcessor: Send + Sync {
-    /// Start processing events for all registered DEXs
-    async fn start(&mut self) -> Result<()>;
-    
-    /// Stop all event processing
-    async fn stop(&mut self) -> Result<()>;
-    
-    /// Get processing status for each DEX
-    async fn get_status(&self) -> HashMap<DexId, ProcessorStatus>;
-}
-
 #[derive(Debug, Clone)]
 pub struct ProcessorStatus {
     pub is_running: bool,
@@ -27,7 +15,7 @@ pub struct ProcessorStatus {
     pub error_count: u64,
 }
 
-pub struct DefaultEventProcessor {
+pub struct EventProcessor {
     update_producer: Arc<UpdateProducer>, 
     ws_managers: HashMap<DexId, JoinHandle<()>>,
     is_running: bool,
@@ -35,7 +23,7 @@ pub struct DefaultEventProcessor {
     dex_configs: HashMap<DexId, DexConfig>,
 }
 
-impl DefaultEventProcessor {
+impl EventProcessor {
     pub fn new(
         update_producer: Arc<UpdateProducer>, 
         network_config: NetworkConfig,
@@ -46,13 +34,56 @@ impl DefaultEventProcessor {
             .collect();
 
         Self {
-            // dex_manager,
             update_producer,
             ws_managers: HashMap::new(),
             is_running: false,
             network_config,
             dex_configs,
         }
+    }
+
+    pub async fn start(&mut self) -> Result<()> {
+        info!("Starting Event Processor...");
+        if self.is_running {
+            return Ok(());
+        }
+        
+        self.is_running = true;
+        let (event_sender, mut event_receiver) = mpsc::channel(5000);
+
+        self.initialize_websockets(event_sender).await?;
+        
+        tokio::spawn(async move {
+            info!("Event processing loop started");
+            
+            while let Some((dex_id, raw_event)) = event_receiver.recv().await {
+                info!("Processing event for {:?}", dex_id);
+                // TODO
+            }
+            
+            info!("Event processing loop stopped");
+        });
+                
+        info!("Event processor started");
+        Ok(())
+    }
+    
+    pub async fn stop(&mut self) -> Result<()> {
+        if !self.is_running {
+            return Ok(());
+        }
+        info!("Stopping Event Processor...");
+        
+        self.is_running = false;
+        
+        // Stop all WebSocket connections
+        
+        info!("Event processor stopped");
+        Ok(())
+    }
+    
+    pub async fn get_status(&self) -> HashMap<DexId, ProcessorStatus> {
+        todo!("Return status for each DEX processor")
     }
 
     /// Initialize WebSocket managers for all enabled DEXs
@@ -116,52 +147,5 @@ impl DefaultEventProcessor {
                 Err(BotError::Config("Aptos not yet implemented".to_string()))
             }
         }
-    }
-}
-
-#[async_trait]
-impl EventProcessor for DefaultEventProcessor {
-    async fn start(&mut self) -> Result<()> {
-        info!("Starting Event Processor...");
-        if self.is_running {
-            return Ok(());
-        }
-        
-        self.is_running = true;
-        let (event_sender, mut event_receiver) = mpsc::channel(5000);
-
-        self.initialize_websockets(event_sender).await?;
-        
-        tokio::spawn(async move {
-            info!("Event processing loop started");
-            
-            while let Some((dex_id, raw_event)) = event_receiver.recv().await {
-                info!("Processing event for {:?}", dex_id);
-                // TODO
-            }
-            
-            info!("Event processing loop stopped");
-        });
-                
-        info!("Event processor started");
-        Ok(())
-    }
-    
-    async fn stop(&mut self) -> Result<()> {
-        if !self.is_running {
-            return Ok(());
-        }
-        info!("Stopping Event Processor...");
-        
-        self.is_running = false;
-        
-        // Stop all WebSocket connections
-        
-        info!("Event processor stopped");
-        Ok(())
-    }
-    
-    async fn get_status(&self) -> HashMap<DexId, ProcessorStatus> {
-        todo!("Return status for each DEX processor")
     }
 }

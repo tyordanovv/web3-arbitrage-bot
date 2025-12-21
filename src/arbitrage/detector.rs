@@ -5,12 +5,6 @@ use tracing::{debug, info};
 
 use crate::{arbitrage::calculator::ArbitrageCalculator, sync::reader::StateReader, types::{ArbitrageOpportunity, Result}};
 
-#[async_trait]
-pub trait ArbitrageDetector: Send + Sync {
-    async fn next_opportunity(&mut self) -> Option<ArbitrageOpportunity>;
-    fn get_stats(&self) -> DetectionStats;
-}
-
 #[derive(Debug, Clone)]
 pub struct DetectionStats {
     pub scans_performed: u64,
@@ -19,17 +13,17 @@ pub struct DetectionStats {
     pub last_scan_timestamp: u64,
 }
 
-pub struct DefaultArbitrageDetector {
+pub struct ArbitrageDetector {
     state_reader: Arc<StateReader>,
-    calculator: Box<dyn ArbitrageCalculator>,
+    calculator: ArbitrageCalculator,
     is_running: bool,
     stats: DetectionStats,
 }
 
-impl DefaultArbitrageDetector {
+impl ArbitrageDetector {
     pub fn new(
         state_reader: Arc<StateReader>,
-        calculator: Box<dyn ArbitrageCalculator>,
+        calculator: ArbitrageCalculator,
     ) -> Self {
         Self {
             state_reader,
@@ -43,11 +37,8 @@ impl DefaultArbitrageDetector {
             },
         }
     }
-}
 
-#[async_trait]
-impl ArbitrageDetector for DefaultArbitrageDetector {
-    async fn next_opportunity(&mut self) -> Option<ArbitrageOpportunity> {
+    pub async fn next_opportunity(&mut self) -> Option<ArbitrageOpportunity> {
         let scan_start = std::time::Instant::now();
 
         // Get snapshot - LOCK-FREE READ

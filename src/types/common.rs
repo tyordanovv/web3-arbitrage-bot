@@ -119,11 +119,6 @@ impl TokenInfo {
         }
     }
 
-    pub fn with_name(mut self, name: impl Into<String>) -> Self {
-        self.name = Some(name.into());
-        self
-    }
-
     /// Convert raw amount to decimal
     pub fn to_decimal(&self, raw_amount: u64) -> Decimal {
         Decimal::from(raw_amount) / Decimal::from(10u64.pow(self.decimals as u32))
@@ -190,12 +185,6 @@ pub struct TokenAmount {
 
 impl TokenAmount {
     pub fn new(token: TokenInfo, raw_amount: u64) -> Self {
-        Self { token, raw_amount }
-    }
-
-    /// Create from decimal amount
-    pub fn from_decimal(token: TokenInfo, decimal_amount: Decimal) -> Self {
-        let raw_amount = token.to_raw(decimal_amount);
         Self { token, raw_amount }
     }
 

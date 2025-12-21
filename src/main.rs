@@ -3,12 +3,12 @@ use std::sync::Arc;
 use arbitrage_bot::{
     arbitrage::{
         arbitrage_engine::{ ArbitrageEngine, ArbitrageEngineBuilder }, 
-        calculator::{ ArbitrageCalculator, DefaultArbitrageCalculator }, 
-        detector::{ ArbitrageDetector, DefaultArbitrageDetector }, 
-        validator::{ DefaultOpportunityValidator, OpportunityValidator }
+        calculator::ArbitrageCalculator, 
+        detector::ArbitrageDetector, 
+        validator::OpportunityValidator
     }, dex::registry::DexRegistryBuilder, 
-    event::processor::{ DefaultEventProcessor, EventProcessor }, 
-    execution::executor::{ DefaultTradeExecutor, TradeExecutor }, 
+    event::processor::EventProcessor, 
+    execution::executor::TradeExecutor, 
     sync::{ reader::StateReader, state::StateUpdater, synchronizer::StateSynchronizer, update_producer::UpdateProducer}, 
     types::Result, utils::{config::Config, logger::init}
 };
@@ -91,28 +91,11 @@ async fn build_components(config: &Config) -> Result<Components> {
 }
 
 fn build_engine(config: &Config, components: Components) -> Result<ArbitrageEngine> {
-    let event_processor = Box::new(DefaultEventProcessor::new(
-        components.update_producer,
-        config.network_config().clone(),
-    )) as Box<dyn EventProcessor>;
-
-    let calculator = Box::new(DefaultArbitrageCalculator::new(
-        config.arbitrage_config().clone(),
-    )) as Box<dyn ArbitrageCalculator>;
-
-    let detector = Box::new(DefaultArbitrageDetector::new(
-        components.state_reader.clone(),
-        calculator,
-    )) as Box<dyn ArbitrageDetector>;
-
-    let executor = Box::new(DefaultTradeExecutor::new(
-        config.execution_config().clone(),
-    )) as Box<dyn TradeExecutor>;
-
-    let validator = Box::new(DefaultOpportunityValidator::new(
-        components.state_reader,
-        config.validation_config().clone(),
-    )) as Box<dyn OpportunityValidator>;
+    let event_processor = EventProcessor::new(components.update_producer, config.network_config().clone());
+    let calculator = ArbitrageCalculator::new(config.arbitrage_config().clone());
+    let detector = ArbitrageDetector::new(components.state_reader.clone(), calculator);
+    let executor = TradeExecutor::new(config.execution_config().clone());
+    let validator = OpportunityValidator::new(components.state_reader, config.validation_config().clone());
 
     ArbitrageEngineBuilder::new()
         .with_event_processor(event_processor)

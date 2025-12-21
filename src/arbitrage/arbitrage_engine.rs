@@ -9,10 +9,10 @@ use crate::{
 use std::{sync::Arc, time::Duration};
 
 pub struct ArbitrageEngine {
-    event_processor: Box<dyn EventProcessor>,
-    detector: Box<dyn ArbitrageDetector>,
-    executor: Box<dyn TradeExecutor>,
-    validator: Box<dyn OpportunityValidator>,
+    event_processor: EventProcessor,
+    detector: ArbitrageDetector,
+    executor: TradeExecutor,
+    validator: OpportunityValidator,
     
     is_running: bool,
     stats: EngineStats,
@@ -43,10 +43,10 @@ impl Default for EngineStats {
 
 impl ArbitrageEngine {
     pub fn new(
-        event_processor: Box<dyn EventProcessor>,
-        detector: Box<dyn ArbitrageDetector>,
-        executor: Box<dyn TradeExecutor>,
-        validator: Box<dyn OpportunityValidator>,
+        event_processor: EventProcessor,
+        detector: ArbitrageDetector,
+        executor: TradeExecutor,
+        validator: OpportunityValidator,
     ) -> Self {
         Self {
             event_processor,
@@ -148,10 +148,10 @@ impl ArbitrageEngine {
 }
 
 pub struct ArbitrageEngineBuilder {
-    event_processor: Option<Box<dyn EventProcessor>>,
-    detector: Option<Box<dyn ArbitrageDetector>>,
-    executor: Option<Box<dyn TradeExecutor>>,
-    validator: Option<Box<dyn OpportunityValidator>>,
+    event_processor: Option<EventProcessor>,
+    detector: Option<ArbitrageDetector>,
+    executor: Option<TradeExecutor>,
+    validator: Option<OpportunityValidator>,
 }
 
 impl ArbitrageEngineBuilder {
@@ -164,30 +164,29 @@ impl ArbitrageEngineBuilder {
         }
     }
 
-    pub fn with_event_processor(mut self, processor: Box<dyn EventProcessor>) -> Self {
+    pub fn with_event_processor(mut self, processor: EventProcessor) -> Self {
         self.event_processor = Some(processor);
         self
     }
 
-    pub fn with_detector(mut self, detector: Box<dyn ArbitrageDetector>) -> Self {
+    pub fn with_detector(mut self, detector: ArbitrageDetector) -> Self {
         self.detector = Some(detector);
         self
     }
 
-    pub fn with_executor(mut self, executor: Box<dyn TradeExecutor>) -> Self {
+    pub fn with_executor(mut self, executor: TradeExecutor) -> Self {
         self.executor = Some(executor);
         self
     }
 
-    pub fn with_validator(mut self, validator: Box<dyn OpportunityValidator>) -> Self {
+    pub fn with_validator(mut self, validator: OpportunityValidator) -> Self {
         self.validator = Some(validator);
         self
     }
 
     pub fn build(self) -> Result<ArbitrageEngine> {
         Ok(ArbitrageEngine::new(
-            self.event_processor
-                .expect("Event processor is required"),
+            self.event_processor.expect("Event processor is required"),
             self.detector.expect("Detector is required"),
             self.executor.expect("Executor is required"),
             self.validator.expect("Validator is required"),

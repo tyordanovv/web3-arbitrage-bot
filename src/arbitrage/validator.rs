@@ -5,27 +5,19 @@ use tracing::debug;
 
 use crate::{sync::reader::StateReader, types::ArbitrageOpportunity, utils::config::ValidationConfig};
 
-#[async_trait]
-pub trait OpportunityValidator: Send + Sync {
-    async fn validate(&self, opportunity: &ArbitrageOpportunity) -> bool;
-}
-
-pub struct DefaultOpportunityValidator {
+pub struct OpportunityValidator {
     state_reader: Arc<StateReader>,
     config: ValidationConfig,
 }
 
-impl DefaultOpportunityValidator {
+impl OpportunityValidator {
     pub fn new(
         state_reader: Arc<StateReader>,
         config: ValidationConfig,
     ) -> Self {
         Self { state_reader, config }
     }
-}
-
-#[async_trait]
-impl OpportunityValidator for DefaultOpportunityValidator {
+    
     async fn validate(&self, _opportunity: &ArbitrageOpportunity) -> bool {
         let validation_start = std::time::Instant::now();
 

@@ -2,28 +2,15 @@ use async_trait::async_trait;
 
 use crate::{types::{ArbitrageOpportunity, ArbitragePath, Result, StateSnapshot, TokenInfo}, utils::config::ArbitrageConfig};
 
-#[async_trait]
-pub trait ArbitrageCalculator: Send + Sync {
-    /// Find opportunities from current state snapshot
-    async fn find_opportunities(&self, snapshot: &StateSnapshot) -> Vec<ArbitrageOpportunity>;
-    
-    async fn calculate_profitability(&self, path: &ArbitragePath, snapshot: &StateSnapshot) -> Result<ArbitrageOpportunity>;
-    async fn find_paths(&self, start_token: &TokenInfo, max_hops: usize, snapshot: &StateSnapshot) -> Vec<ArbitragePath>;
-    async fn validate_opportunity(&self, opportunity: &ArbitrageOpportunity, snapshot: &StateSnapshot) -> bool;
-}
-
-pub struct DefaultArbitrageCalculator {
+pub struct ArbitrageCalculator {
     config: ArbitrageConfig,
 }
 
-impl DefaultArbitrageCalculator {
+impl ArbitrageCalculator {
     pub fn new(config: ArbitrageConfig) -> Self {
         Self { config }
     }
-}
-
-#[async_trait]
-impl ArbitrageCalculator for DefaultArbitrageCalculator {
+    
     async fn find_opportunities(&self, _snapshot: &StateSnapshot) -> Vec<ArbitrageOpportunity> {
         todo!("Implement opportunity finding logic")
     }
