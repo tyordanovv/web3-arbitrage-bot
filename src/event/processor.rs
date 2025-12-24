@@ -1,151 +1,67 @@
 use async_trait::async_trait;
 use tokio::{sync::{ RwLock, mpsc }, task::JoinHandle};
-use tracing::{info, warn};
-use std::{collections::HashMap, sync::Arc};
+use tracing::{error, info, warn};
+use std::{collections::HashMap, sync::{Arc, atomic::{AtomicBool, AtomicU64, Ordering}}};
 
-use crate::{
-    event::{context::WsContext, websocket::{DexWebSocket, WebSocketManager}}, sync::update_producer::UpdateProducer, types::{ BotError, DexId, Network, RawEvent, Result, SwapDelta }, utils::config::{DexConfig, NetworkConfig}
-};
-
-#[derive(Debug, Clone)]
-pub struct ProcessorStatus {
-    pub is_running: bool,
-    pub events_processed: u64,
-    pub last_event_time: Option<u64>,
-    pub error_count: u64,
-}
+use crate::{event::{connection::DexConnection, metrics::ProcessorMetrics}, sync::update_producer::UpdateProducer, types::{DexId, Network, Result}, utils::config::{DexConfig, NetworkConfig}};
 
 pub struct EventProcessor {
-    update_producer: Arc<UpdateProducer>, 
-    ws_managers: HashMap<DexId, JoinHandle<()>>,
-    is_running: bool,
-    network_config: NetworkConfig,
-    dex_configs: HashMap<DexId, DexConfig>,
+    connections: RwLock<HashMap<DexId, Arc<DexConnection>>>,
 }
 
 impl EventProcessor {
-    pub fn new(
-        update_producer: Arc<UpdateProducer>, 
-        network_config: NetworkConfig,
-    ) -> Self {      
-        let dex_configs = network_config.dexes
+    pub async fn new(
+        update_producer: Arc<UpdateProducer>,
+        network: NetworkConfig,
+    ) -> Result<Self> {
+        let dex_ids: Vec<DexId> = network.dexes
             .iter()
-            .map(|config| (config.id, config.clone()))
+            .filter(|d| d.enabled)
+            .map(|d| d.id)
             .collect();
 
-        Self {
-            update_producer,
-            ws_managers: HashMap::new(),
-            is_running: false,
-            network_config,
-            dex_configs,
+        let metrics = Arc::new(ProcessorMetrics::new(&dex_ids));
+
+        let mut map = HashMap::new();
+
+        for dex in network.dexes.into_iter().filter(|d| d.enabled) {
+            let conn = DexConnection::new(
+                dex.id,
+                dex.clone(),
+                Arc::clone(&update_producer),
+                Arc::clone(&metrics),
+            );
+
+            map.insert(dex.id, Arc::new(conn));
         }
+
+        Ok(Self {
+            connections: RwLock::new(map),
+        })
     }
 
-    pub async fn start(&mut self) -> Result<()> {
-        info!("Starting Event Processor...");
-        if self.is_running {
-            return Ok(());
-        }
-        
-        self.is_running = true;
-        let (event_sender, mut event_receiver) = mpsc::channel(5000);
-
-        self.initialize_websockets(event_sender).await?;
-        
-        tokio::spawn(async move {
-            info!("Event processing loop started");
-            
-            while let Some((dex_id, raw_event)) = event_receiver.recv().await {
-                info!("Processing event for {:?}", dex_id);
-                // TODO
-            }
-            
-            info!("Event processing loop stopped");
-        });
-                
-        info!("Event processor started");
-        Ok(())
-    }
-    
-    pub async fn stop(&mut self) -> Result<()> {
-        if !self.is_running {
-            return Ok(());
-        }
-        info!("Stopping Event Processor...");
-        
-        self.is_running = false;
-        
-        // Stop all WebSocket connections
-        
-        info!("Event processor stopped");
-        Ok(())
-    }
-    
-    pub async fn get_status(&self) -> HashMap<DexId, ProcessorStatus> {
-        todo!("Return status for each DEX processor")
-    }
-
-    /// Initialize WebSocket managers for all enabled DEXs
-    async fn initialize_websockets(&mut self, event_sender: mpsc::Sender<(DexId, RawEvent)>) -> Result<()> {        
-        let enabled_dexes = self.get_enabled_dex_ids().await?;
-        info!("Found {} enabled DEXs: {:?}", enabled_dexes.values().flatten().count(), enabled_dexes);
-        
-        if enabled_dexes.is_empty() {
-            warn!("No DEXs enabled - check your DexManager configuration");
-            return Ok(());
-        }   
-
-        for (network, dex_ids) in self.get_enabled_dex_ids().await? {
-            for dex_id in dex_ids {
-                info!("Initializing WS for DEX {:?} on network {:?}", dex_id, network);
-                
-                let mut ws = self.build_ws_manager_from_config(&dex_id, network)?;
-                let sender = event_sender.clone();
-                
-                let handle = tokio::spawn(async move {
-                    let ctx = Arc::new(WsContext {
-                        dex_id,
-                        network,
-                        tx: sender,
-                    });
-                    ws.connect(ctx).await.ok();
-                });
-                
-                self.ws_managers.insert(dex_id, handle);
+    pub async fn start(&self) {
+        for (id, conn) in self.connections.read().await.iter() {
+            if let Err(e) = conn.start().await {
+                error!("Failed to start {:?}: {}", id, e);
             }
         }
-        Ok(())
+        info!("EventProcessor started");
     }
 
-    async fn process_event(&self, dex_id: DexId, raw_event: RawEvent) -> Result<SwapDelta> {
-        info!("Processing event for DEX {:?}: {:?}", dex_id, raw_event);
-        Ok(SwapDelta::new())
-    }
-
-    async fn get_enabled_dex_ids(&self) -> Result<HashMap<Network, Vec<DexId>>> {
-        Ok(HashMap::new())
-    }
-
-    fn build_ws_manager_from_config(
-        &self, 
-        dex_id: &DexId, 
-        network: Network
-    ) -> Result<Box<dyn WebSocketManager>> {
-        let dex_config = self.dex_configs
-            .get(dex_id)
-            .ok_or_else(|| BotError::Config(format!("No config found for DEX: {:?}", dex_id)))?;
-
-        match network {
-            Network::SuiMainnet => Ok(Box::new(DexWebSocket::new(
-                &self.network_config.ws_url,
-                &dex_config.package_id,
-                &dex_config.event_type,
-            ))),
-            _ => {
-                // TODO: Implement AptosDexWs
-                Err(BotError::Config("Aptos not yet implemented".to_string()))
+    pub async fn stop(&self) {
+        for (id, conn) in self.connections.read().await.iter() {
+            if let Err(e) = conn.stop().await {
+                error!("Failed to stop {:?}: {}", id, e);
             }
         }
+        info!("EventProcessor stopped");
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct ConnectionStatus {
+    pub is_running: bool,
+    pub last_event_time: Option<u64>,
+    pub events_processed: u64,
 }

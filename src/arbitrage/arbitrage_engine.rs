@@ -70,7 +70,7 @@ impl ArbitrageEngine {
         self.is_running = true;
         self.stats = EngineStats::default();
 
-        self.event_processor.start().await?;
+        self.event_processor.start().await;
         info!("Event processor started");
 
         self.main_loop().await?;
@@ -125,7 +125,7 @@ impl ArbitrageEngine {
         info!("Shutting down Arbitrage Engine...");
         self.is_running = false;
 
-        self.event_processor.stop().await?;
+        self.event_processor.stop().await;
 
         let runtime = self.stats.start_time.elapsed();
         info!(

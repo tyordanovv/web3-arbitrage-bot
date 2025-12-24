@@ -6,7 +6,7 @@ use std::str::FromStr;
 use crate::types::{BotError, DexId, MIN_PROFIT_PERCENT, Network, Result, TokenInfo};
 
 /// Network configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct NetworkConfig {
     pub network: Network,
     pub rpc_url: String,
@@ -26,7 +26,7 @@ impl Default for NetworkConfig {
 }
 
 /// Simplified DEX config
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct DexConfig {
     pub id: DexId,
     pub network: Network,
@@ -37,7 +37,7 @@ pub struct DexConfig {
 }
 
 /// Pool configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct PoolConfig {
     pub address: String,
     pub token_a: TokenInfo,
@@ -45,7 +45,7 @@ pub struct PoolConfig {
 }
 
 /// Configuration for path finding
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ArbitrageConfig {
     pub max_hops: usize,
     pub min_liquidity_per_pool_usd: Decimal,
@@ -67,7 +67,7 @@ impl Default for ArbitrageConfig {
 }
 
 /// Execution configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ExecutionConfig {
     /// Dry run mode (don't execute real transactions)
     pub dry_run: bool,
@@ -93,7 +93,7 @@ impl Default for ExecutionConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ValidationConfig {
     /// Maximum age of opportunity in milliseconds before considering stale
     pub max_opportunity_age_ms: u64,
@@ -123,7 +123,7 @@ impl Default for ValidationConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct LoggingConfig {
     pub level: String,
     pub enable_metrics: bool,
@@ -139,7 +139,7 @@ impl Default for LoggingConfig {
 }
 
 /// Consolidated synchronization configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct SyncConfig {
     /// Maximum number of pools per DEX
     pub max_pools_per_dex: usize,
@@ -200,7 +200,7 @@ impl SyncConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     /// Network settings
     pub network: NetworkConfig,

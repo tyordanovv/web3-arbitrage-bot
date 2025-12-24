@@ -62,9 +62,6 @@ impl FromStr for DexId {
 
 /// Blockchain network identifier
 /// 
-/// TODO SuiMainnet
-/// TODO AptosMainnet
-/// TODO AptosTestnet
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Network {
     AptosTestnet,
@@ -73,13 +70,31 @@ pub enum Network {
     SuiMainnet
 }
 
-impl Network {
-    pub fn is_testnet(&self) -> bool {
-        matches!(self, Network::SuiTestnet)
-    }
+pub struct ChainEndpoints {
+    pub rpc_url: &'static str,
+    pub ws_url: &'static str,
+}
 
-    pub fn is_mainnet(&self) -> bool {
-        matches!(self, Network::SuiMainnet)
+impl Network {
+    pub fn endpoints(&self) -> ChainEndpoints {
+        match self {
+            Network::SuiMainnet => ChainEndpoints {
+                rpc_url: "https://fullnode.mainnet.sui.io",
+                ws_url: "wss://fullnode.mainnet.sui.io",
+            },
+            Network::SuiTestnet => ChainEndpoints {
+                rpc_url: "https://fullnode.testnet.sui.io",
+                ws_url: "wss://fullnode.testnet.sui.io",
+            },
+            Network::AptosMainnet => ChainEndpoints {
+                rpc_url: "https://fullnode.mainnet.aptoslabs.com",
+                ws_url: "wss://fullnode.mainnet.aptoslabs.com",
+            },
+            Network::AptosTestnet => ChainEndpoints {
+                rpc_url: "https://fullnode.testnet.aptoslabs.com",
+                ws_url: "wss://fullnode.testnet.aptoslabs.com",
+            },
+        }
     }
 }
 
@@ -93,6 +108,8 @@ impl fmt::Display for Network {
         }
     }
 }
+
+
 
 // ============================================================================
 // Token Information
